@@ -23,17 +23,9 @@ class Neighborhood:
         box('road',(-2,-16,-.006),(40,7,.02),(.14,.19,.22,1))
         for y in (-11,-21):box('pavement',(-2,y,-.008),(40,3,.025),(.63,.66,.61,1))
         for x in range(-20,18,5):box('road dash',(x,-16,.011),(2.0,.11,.008),(.9,.84,.56,1))
-        for x in (-18,-12,-6,0,6,12):
-            col=[(.56,.65,.64,1),(.70,.60,.48,1),(.50,.57,.68,1)][(x//6)%3]
-            box('neighborhood building',(x,-23,2.1),(5.2,3,4.2),col,True)
-            box('shop awning',(x,-21.35,2.3),(4.8,.5,.18),(.11,.25,.30,1))
-            for dx in (-1.6,0,1.6):box('window',(x+dx,-21.48,1.5),(1.1,.025,1.1),(.13,.29,.36,1))
-            box('masonry plinth',(x,-21.46,.24),(5.18,.12,.48),(.37,.38,.34,1))
-            box('roof coping',(x,-23,4.23),(5.4,3.2,.14),(.36,.37,.34,1))
-            for dx in (-1.6,0,1.6):
-                for edge in (-.59,.59):box('window mullion',(x+dx+edge,-21.44,1.5),(.055,.06,1.22),(.27,.29,.27,1))
-                for z in (.91,2.09):box('window sill',(x+dx,-21.43,z),(1.23,.11,.06),(.37,.38,.34,1))
-            app.builder.text(s,['BAKERY','BOOKS','COFFEE'][(x//6)%3],(x,-21.37,2.7),.19,(.93,.91,.79,1),h=180,align=TextNode.ACenter)
+        from .architecture import building
+        for i,x in enumerate((-18,-12,-6,0,6,12)):
+            building(app,s,x,-25,5.2,7,(5.8,8.7,6.3,5.5,3.8,8.6)[i],i,180)
         for index,(x,y) in enumerate([(-13,-9),(9,-9),(-15,8),(11,10),(-18,-20),(14,-20)]):
             app.builder.cylinder(s,'bark trunk',(x,y,1.25),(.23,.23,2.5),(.33,.28,.20,1),'wood')
             app.workshop.block_box((x-.12,y-.12,0),(x+.12,y+.12,2.5))
@@ -63,7 +55,7 @@ class Neighborhood:
             app.builder.text(s,f'BAY {slot+1}',(3.91,y,.86),.10,(.85,.92,.88,1),h=-90,align=TextNode.ACenter)
         app.interaction.box(app.render,'collection',(4.5,3.7,1.02),(1.5,4.8,.24))
         app.interaction.box(app.render,'shop_terminal',(-1.5,-3.13,1.5),(.75,.14,.5))
-        self.root.flattenStrong()
+        # Architecture is already batched per building; retain those culling groups.
         from .city import expand_city
         expand_city(app)
         self.sync()
@@ -89,14 +81,17 @@ class Resident:
     def set_pc(self,key):
         self.parcel.node().removeAllChildren()
         root=self.parcel.attachNewNode('matching customer case');case(self.app.builder,root,key)
-        root.setPos(0,-.28,.80);root.setScale(.62);root.setH(-30)
+        root.setPos(0,-.33,1.02);root.setScale(.62);root.setH(0);self.carry_kind='pc'
     def walk_to(self,route):
         self.route=[self.root.getPos()]+[Vec3(*p,0) for p in route];self.target_index=1;self.waiting=False;self.finished=False
+    def face(self,d,dt):
+        goal=math.degrees(math.atan2(d.x,-d.y));delta=(goal-self.root.getH()+180)%360-180
+        self.root.setH(self.root.getH()+max(-dt*140,min(dt*140,delta)))
     def update(self,dt):
         if self.target_index>=len(self.route):
             self.waiting=True
             d=self.app.player-self.root.getPos();d.z=0
-            if d.length()<3.2:self.root.setH(math.degrees(math.atan2(d.x,-d.y)))
+            if d.length()<3.2:self.face(d,dt)
             animate_resident(self,False,dt)
             return
         d=self.route[self.target_index]-self.root.getPos();distance=d.length()
@@ -105,8 +100,8 @@ class Resident:
         to_player=self.app.player-self.root.getPos();to_player.z=0
         if to_player.length()<.65 and d.normalized().dot(to_player)>.1:
             animate_resident(self,False,dt);return
-        step=min(distance,dt*1.15);self.root.setPos(self.root.getPos()+d.normalized()*step)
-        self.root.setH(math.degrees(math.atan2(d.x,-d.y)))
+        step=min(distance,dt*(.94 if not self.parcel.isHidden() else 1.10+(self.index%4)*.06));self.root.setPos(self.root.getPos()+d.normalized()*step)
+        self.face(d,dt)
         animate_resident(self,True,dt)
 
 class Customers:

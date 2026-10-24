@@ -8,8 +8,8 @@ SHADOW=BitMask32.bit(3)
 
 def install_lighting(app):
     r=app.render;r.clearLight()
-    ambient=AmbientLight('cool room bounce');ambient.setColor((.29,.32,.35,1));r.setLight(r.attachNewNode(ambient))
-    sun=DirectionalLight('late afternoon sun');sun.setColor((.79,.73,.61,1))
+    ambient=AmbientLight('cool room bounce');ambient.setColor((.39,.43,.46,1));r.setLight(r.attachNewNode(ambient))
+    sun=DirectionalLight('late afternoon sun');sun.setColor((.92,.85,.73,1))
     sun.setShadowCaster(True,2048,2048);sun.setCameraMask(SHADOW)
     sun.getLens().setFilmSize(57,57);sun.getLens().setNearFar(4,95)
     node=r.attachNewNode(sun);node.setPos(-24,-32,35);node.lookAt(-2,-3,0);r.setLight(node)
@@ -17,8 +17,8 @@ def install_lighting(app):
     for i,pos in enumerate([(-6.7,-4.4,2.43),(1.8,-4.4,2.43),(-6.7,3.4,2.43),(1.8,3.4,2.43)]):
         light=PointLight('warm fluorescent '+str(i));light.setColor((.90,.78,.59,1) if i<2 else (.76,.84,.86,1))
         light.setAttenuation((1,.04,.055));np=r.attachNewNode(light);np.setPos(*pos);r.setLight(np)
-    fog=Fog('subtle distance haze');fog.setColor(.43,.48,.51);fog.setExpDensity(.007);r.setFog(fog)
-    app.setBackgroundColor(.43,.48,.51);r.setShaderAuto()
+    fog=Fog('subtle distance haze');fog.setColor(.64,.71,.74);fog.setExpDensity(.0045);r.setFog(fog)
+    app.setBackgroundColor(.64,.71,.74);r.setShaderAuto()
 
 VERTEX='''#version 130
 uniform mat4 p3d_ModelViewProjectionMatrix;
@@ -45,18 +45,20 @@ void main(){
  float edge=clamp((abs(luma(n)-luma(s))+abs(luma(e)-luma(w)))*1.4,0.,.55);
  c=mix(c,(n+s+e+w)*.25,edge);
  if(film>.5){
-  c=mix(vec3(luma(c)),c,.87);
-  c=(c-.5)*1.045+.5;
-  c=pow(max(c,vec3(0)),vec3(.96,1.,1.035));
-  vec2 p=uv*2.-1.;c*=1.-.15*pow(clamp(dot(p,p)*.5,0.,1.),1.5);
+  c=mix(vec3(luma(c)),c,.98);
+  c=(c-.5)*1.025+.5;
+  c=pow(max(c,vec3(0)),vec3(.94,.96,.98));
+  vec2 p=uv*2.-1.;c*=1.-.085*pow(clamp(dot(p,p)*.5,0.,1.),1.5);
   float grain=fract(sin(dot(floor(uv*resolution),vec2(12.9898,78.233))+floor(clock*24.)*.173)*43758.5453)-.5;
-  c+=grain*.014;
+  c+=grain*.004;
  }
  color=vec4(clamp(c,0.,1.),1.);
 }
 '''
 class Presentation:
     def __init__(self,app):
+        from .sky import create_sky
+        self.sky=create_sky(app)
         self.app=app;self.film=True;self.shadows=True;self.manager=FilterManager(app.win,app.cam)
         self.texture=Texture('scene color');self.texture.setMinfilter(Texture.FTLinear);self.texture.setMagfilter(Texture.FTLinear)
         self.quad=self.manager.renderSceneInto(colortex=self.texture)
@@ -65,6 +67,7 @@ class Presentation:
             self.quad.setShaderInput('scene',self.texture);self.update(0)
         app.accept('f6',self.toggle_film);app.accept('f7',self.toggle_shadows)
     def update(self,time):
+        self.sky.setPos(self.app.camera.getX(),self.app.camera.getY(),0)
         if self.quad:
             self.quad.setShaderInput('clock',time);self.quad.setShaderInput('film',float(self.film))
             self.quad.setShaderInput('resolution',Vec2(max(1,self.app.win.getXSize()),max(1,self.app.win.getYSize())))

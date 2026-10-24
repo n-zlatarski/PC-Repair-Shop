@@ -30,61 +30,40 @@ def build_resident(person):
         b.lines(body,'fabric fold',[(side*.06,-.104,1.02),(side*.13,-.085,1.045)],tuple(c*.82 for c in shirt[:3])+(1,),1)
         b.lines(body,'chest seam',[(side*.055,-.116,1.28),(side*.14,-.080,1.29)],tuple(c*.8 for c in shirt[:3])+(1,),1)
     b.cylinder(body,'neck',(0,0,1.48),(.092,.096,.14),skin,'skin')
-    b.profile(body,'face and skull',[(1.50,.035,.044,0,-.018),(1.525,.060,.064,0,-.012),(1.57,.073+(i%3)*.003,.077,0,-.005),(1.625,.086,.084),(1.68,.080,.084),(1.725,.058,.061),(1.75,.002,.002)],skin,'skin',segments=28)
-    for x in (-.086,.086):b.ellipsoid(body,'ear',(x,0,1.626),(.025,.038,.059),skin,'skin')
-    # Brows, eyelids and recessed eyes: deliberately restrained, not oversized cartoon eyes.
-    for x in (-.034,.034):
-        b.ellipsoid(body,'eye socket',(x,-.079,1.652),(.033,.010,.015),tuple(c*.71 for c in skin[:3])+(1,),'skin')
-        b.ellipsoid(body,'eye',(x,-.087,1.652),(.025,.005,.008),(.50,.48,.43,1))
-        b.ellipsoid(body,'iris',(x,-.092,1.652),(.008,.003,.008),(.17,.19,.16,1))
-        b.ellipsoid(body,'pupil',(x,-.094,1.652),(.003,.002,.005),dark)
-        b.ellipsoid(body,'brow',(x,-.079,1.671),(.037,.010,.006),hair)
-    b.ellipsoid(body,'nose bridge',(0,-.089,1.626),(.023,.026,.052),skin,'skin')
-    b.ellipsoid(body,'nose tip',(0,-.105,1.605),(.029,.031,.018),skin,'skin')
-    for x in (-.012,.012):b.ellipsoid(body,'nostril',(x,-.102,1.598),(.008,.009,.005),tuple(c*.55 for c in skin[:3])+(1,))
-    lips=(skin[0]*.70,skin[1]*.63,skin[2]*.65,1)
-    b.ellipsoid(body,'lips',(0,-.079,1.57),(.041,.011,.009),lips)
-    b.lines(body,'mouth', [(-.018,-.085,1.57),(0,-.086,1.568),(.018,-.085,1.57)],(.24,.12,.10,1),1)
-    b.profile(body,'hair cap',[(1.678,.082,.084,0,.009),(1.71,.080,.08,0,.008),(1.752,.057,.055),(1.772,.001,.001)],hair,'fabric',segments=24)
-    if i%3==0:
-        b.ellipsoid(body,'long back hair',(0,.068,1.57),(.18,.105,.31),hair,'fabric')
-        for side in (-1,1):b.ellipsoid(body,'side hair',(side*.078,.013,1.61),(.042,.10,.20),hair,'fabric')
-    else:
-        for j in range(7):
-            n=b.ellipsoid(body,'swept hair',(-.060+j*.019,-.024,1.735),(.043,.105,.032),hair,'fabric');n.setR(-18)
-    if i%4==1:
-        b.ellipsoid(body,'cap crown',(0,.006,1.756),(.18,.18,.075),shirt,'fabric')
-        b.ellipsoid(body,'cap brim',(0,-.094,1.738),(.18,.12,.012),shirt,'fabric')
-    if i%4==2:
-        for x in (-.036,.036):
-            b.ring(body,(x,-.101,1.653),.023,(.11,.11,.10,1),.0025,steps=20)
-        b.lines(body,'glasses bridge',[(-.013,-.104,1.655),(.013,-.104,1.655)],dark,2)
-    if i%4==3:
-        b.profile(body,'short beard',[(1.512,.038,.052,0,-.01),(1.535,.061,.067,0,-.008),(1.55,.07,.073,0,-.002)],hair,'fabric',segments=20)
+    from .character_mesh import head
+    head(b,body,i,skin,hair)
     # Collar, zip/seam and pockets sit on the garment surface.
     for side in (-1,1):
         n=b.ellipsoid(body,'folded collar',(side*.06,-.060,1.425),(.105,.028,.045),tuple(c*.75 for c in shirt[:3])+(1,),'fabric');n.setR(side*23)
     b.lines(body,'jacket zip',[(0,-.105,.93),(0,-.095,1.13),(0,-.109,1.30),(0,-.073,1.43)],(.32,.32,.29,1),1.2)
     for side in (-1,1):b.lines(body,'pocket seam',[(side*.07,-.10,1.05),(side*.12,-.083,1.00)],(.10,.13,.13,1),1.5)
     body.flattenStrong();person.torso=body;body=person.body
-    person.legs=[];person.knees=[];person.arms=[];person.elbows=[]
+    person.legs=[];person.knees=[];person.arms=[];person.elbows=[];person.wrists=[];person.shoulders=[]
     for side in (-1,1):
         hip=body.attachNewNode('hip joint');hip.setPos(side*(.079+.009*build),0,.88)
         b.profile(hip,'trouser thigh',[(-.43,.052,.057),(-.38,.056,.062),(-.34,.054,.063),(-.25,.062,.073),(-.12,.073,.081),(0,.078,.084)],denim,'fabric')
         knee=hip.attachNewNode('knee joint');knee.setZ(-.42)
+        b.ellipsoid(knee,'rounded trouser knee',(0,0,0),(.106,.116,.11),denim,'fabric')
         b.profile(knee,'trouser calf',[(-.375,.043,.047),(-.35,.047,.050),(-.32,.043,.048),(-.25,.046,.055),(-.13,.055,.063),(-.03,.051,.056),(0,.054,.059)],denim,'fabric')
         b.profile(knee,'shaped leather shoe',[(-.434,.059,.125,0,-.047),(-.419,.060,.126,0,-.048),(-.390,.055,.117,0,-.044),(-.361,.047,.067,0,-.015),(-.350,.040,.045)],(.085,.071,.059,1),'rubber')
         for z in (-.382,-.392,-.402):b.lines(knee,'shoe laces',[(-.025,-.083,z),(.025,-.083,z)],(.28,.27,.23,1),1)
         b.ellipsoid(knee,'shoe sole',(0,-.049,-.434),(.119,.25,.021),(.10,.10,.09,1),'rubber')
         person.legs.append(hip);person.knees.append(knee)
-        arm=body.attachNewNode('shoulder joint');arm.setPos(side*(shoulder*build-.030),0,1.365);arm.setR(side*-5)
-        b.profile(arm,'upper sleeve',[(-.30,.045,.048),(-.24,.053,.058),(-.08,.066,.072),(.02,.062,.067)],shirt,'fabric')
+        arm=body.attachNewNode('shoulder joint');arm.setPos(side*(shoulder*build-.042),0,1.365);arm.setR(side*-5)
+        b.profile(arm,'upper sleeve',[(-.30,.045,.048),(-.24,.053,.058),(-.08,.068,.073),(.01,.068,.073),(.055,.025,.032)],shirt,'fabric')
         elbow=arm.attachNewNode('elbow joint');elbow.setZ(-.285)
-        b.profile(elbow,'bare forearm' if short_sleeve else 'forearm sleeve',[(-.235,.031,.033),(-.20,.034,.035),(-.09,.047,.049),(0,.045,.048)],skin if short_sleeve else shirt,'skin' if short_sleeve else 'fabric')
-        b.ellipsoid(elbow,'hand',(0,-.006,-.285),(.071,.045,.115),skin,'skin')
-        for f in range(4):b.ellipsoid(elbow,'finger',(-.022+f*.014,-.006,-.342),(.014,.029,.055-abs(f-1.5)*.005),skin,'skin')
-        b.ellipsoid(elbow,'thumb',(-side*.034,-.012,-.277),(.022,.027,.059),skin,'skin')
-        elbow.flattenStrong()
+        b.ellipsoid(elbow,'sleeve elbow',(0,0,0),(.090,.096,.090),shirt,'fabric')
+        b.profile(elbow,'bare forearm' if short_sleeve else 'forearm sleeve',[(-.27,.028,.030),(-.235,.031,.033),(-.20,.034,.035),(-.09,.047,.049),(0,.045,.048)],skin if short_sleeve else shirt,'skin' if short_sleeve else 'fabric')
+        # Flatten meshes at the joint origin; Panda also bakes the root transform.
+        elbow.setPos(0,0,0);elbow.flattenStrong();elbow.setZ(-.285)
+        wrist=elbow.attachNewNode('articulated wrist')
+        b.ellipsoid(wrist,'palm',(0,0,0),(.067,.034,.079),skin,'skin')
+        for f in range(4):
+            finger=wrist.attachNewNode('curved finger');finger.setPos(-.022+f*.014,0,-.033)
+            b.ellipsoid(finger,'proximal finger',(0,-.004,-.014),(.012,.022,.035),skin,'skin')
+            b.ellipsoid(finger,'bent fingertip',(0,-.014,-.028),(.012,.022,.020),skin,'skin')
+        b.ellipsoid(wrist,'opposing thumb',(-side*.032,-.008,-.004),(.021,.024,.045),skin,'skin')
+        wrist.flattenStrong();wrist.setZ(-.285);person.wrists.append(wrist);person.shoulders.append(Vec3(arm.getPos()))
         person.arms.append(arm);person.elbows.append(elbow)
     if i%3==1:
         b.ellipsoid(body,'canvas backpack',(0,.145,1.21),(.28,.15,.38),(.23,.20,.16,1),'fabric')
@@ -96,16 +75,24 @@ def build_resident(person):
     person.parcel.hide();b.shadow(person.root,(0,0,.012),(.66,.48),.7)
 
 def animate_resident(person,moving,dt):
-    if moving:person.phase+=dt*5.6
+    if moving:person.phase+=dt*(5.0 if not person.parcel.isHidden() else 5.6)
     phase=person.phase
     carrying=not person.parcel.isHidden()
+    person.torso.setP(0)
     for i,(leg,knee) in enumerate(zip(person.legs,person.knees)):
         t=phase+i*math.pi
-        leg.setP(math.sin(t)*19 if moving else 0)
+        leg.setP(math.sin(t)*(14 if carrying else 19) if moving else 0)
         knee.setP(max(0,math.sin(t-.65))*38 if moving else 0)
     for i,(arm,elbow) in enumerate(zip(person.arms,person.elbows)):
-        arm.setP(-18 if carrying else math.sin(phase+(1-i)*math.pi)*10 if moving else 0)
-        elbow.setP(-57 if carrying else -9)
+        arm.setHpr(0,-18 if carrying else math.sin(phase+(1-i)*math.pi)*10 if moving else 0,0)
+        elbow.setHpr(0,-57 if carrying else -9,0)
+        if not carrying:elbow.setPos(0,0,-.285)
         arm.setR((1 if i==0 else -1)*(10 if carrying else 2))
+    if carrying:
+        from .carry_pose import carrying as apply_carry
+        apply_carry(person,moving,dt)
+    else:
+        person.parcel.setPos(0,0,0);person.parcel.setHpr(0,0,0)
+        for wrist in person.wrists:wrist.setPos(0,0,-.285);wrist.setHpr(0,0,0)
     person.torso.setH(math.sin(phase)*.6 if moving else math.sin(person.app.time*.65+person.index)*.4)
     person.body.setZ((abs(math.cos(phase))* .014 if moving else math.sin(person.app.time*1.7+person.index)*.0015))

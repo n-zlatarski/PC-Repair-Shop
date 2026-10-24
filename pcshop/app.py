@@ -38,6 +38,8 @@ class WorkshopApp(ShowBase):
         self.service=ServiceControls(self);self.neighborhood=Neighborhood(self);self.customers=Customers(self)
         from .courier import Courier
         self.courier=Courier(self)
+        from .street_life import StreetLife
+        self.street_life=StreetLife(self)
         self.ui=Interface(self)
         self.equipment=ShopEquipment(self);self.service.tools.build_board()
         self.graphics=Presentation(self)
@@ -292,7 +294,7 @@ class WorkshopApp(ShowBase):
     def update(self,task):
         dt=min(self.clock.getDt(),.05); self.time+=dt
         if self.mode not in ('pause','reset','welcome'):
-            self.job.tick(dt,pause_courier=self.courier.blocked());self.courier.sync(dt);self.customers.update(dt);self.neighborhood.sync()
+            self.job.tick(dt,pause_courier=self.courier.blocked());self.courier.sync(dt);self.customers.update(dt);self.street_life.update(dt);self.neighborhood.sync()
             self.autosave_time+=dt
             if self.autosave_time>5:self.save();self.autosave_time=0
             if self.mode=='ticket' and self.customers.at_counter!=self.last_waiting:self.ui.show('ticket')

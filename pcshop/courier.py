@@ -103,6 +103,7 @@ class Courier:
         else:pos=HANDOVER
         self.driver.root.setPos(pos)
         self.driver.parcel.show() if phase in ('walk','waiting','handover') else self.driver.parcel.hide()
+        self.driver.carry_reach=.04*math.sin(math.pi*t) if phase=='handover' else 0
         if seated or phase in ('exit','enter'):
             self.driver.root.setH(90)
             animate_resident(self.driver,False,dt)
@@ -114,7 +115,4 @@ class Courier:
             self.driver.root.setH(math.degrees(math.atan2(target.x,-target.y)))
             animate_resident(self.driver,phase in ('walk','return'),dt)
         if phase=='waiting' and self.last_phase!=phase and hasattr(a,'ui'):a.ui.toast('Parts Express is outside. Meet the courier on the front pavement [E].')
-        self.driver.parcel.setY(-.12*math.sin(math.pi*t) if phase=='handover' else 0)
-        if phase=='handover':
-            for arm in self.driver.arms:arm.setP(-18-8*math.sin(math.pi*t))
         self.last_phase=phase

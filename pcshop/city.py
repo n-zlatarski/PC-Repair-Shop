@@ -30,33 +30,13 @@ def expand_city(app):
             if min(abs(y-v) for v in (-16,-43,23))>5:box(root,'avenue marking',(x,y,.015),(.10,2.1,.008),(.79,.75,.58,1))
         for y in (-16,-43,23):
             for i in range(7):box(root,'crosswalk',(x-3+i,y+5,.018),(.50,2.6,.008),(.80,.80,.73,1))
-    palettes=[(.50,.47,.39,1),(.45,.49,.50,1),(.55,.40,.31,1),(.58,.55,.47,1),(.37,.41,.39,1)]
+    from .architecture import building as make_building
     def building(x,y,w,d,h,index,label=None):
-        g=root.attachNewNode('district block '+str(index));c=palettes[index%len(palettes)]
-        box(g,'masonry building',(x,y,h/2),(w,d,h),c,True,'brick' if index%3==0 else 'plaster')
-        box(g,'roof cornice',(x,y,h+.04),(w+.20,d+.20,.20),(.25,.27,.26,1))
-        box(g,'foundation',(x,y,.28),(w+.10,d+.10,.56),(.32,.33,.30,1))
-        for z in [1.8+2.8*i for i in range(max(1,int(h/2.8)))]:
-            for xx in range(max(2,int(w/2.3))):
-                px=x-w/2+1.1+xx*2.3
-                for side in (-1,1):
-                    py=y+side*(d/2+.015)
-                    box(g,'window surround',(px,py,z),(1.18,.08,1.42),(.24,.25,.23,1))
-                    box(g,'recessed glass',(px,py+side*.046,z),(1.02,.012,1.26),(.14,.21,.23,1))
-                    box(g,'window centre',(px,py+side*.055,z),(.045,.02,1.30),(.49,.50,.46,1))
-                    box(g,'stone sill',(px,py+side*.08,z-.71),(1.28,.16,.09),(.47,.47,.42,1))
-            if z>2:box(g,'floor band',(x,y-d/2-.03,z-1.3),(w,.07,.10),(.35,.35,.31,1))
-        box(g,'entry door',(x,y-d/2-.07,1.03),(1.22,.055,2.04),(.09,.15,.17,1))
-        box(g,'door handle',(x+.43,y-d/2-.11,1.05),(.025,.035,.25),(.62,.64,.61,1))
-        if label:
-            box(g,'shop fascia',(x,y-d/2-.12,2.7),(w*.86,.12,.52),(.13,.23,.22,1))
-            b.text(g,label,(x,y-d/2-.19,2.61),.24,(.86,.84,.74,1),align=TextNode.ACenter)
-        box(g,'roof ventilation',(x+w*.22,y,h+.38),(1.5,1.1,.60),(.31,.33,.32,1))
-        g.flattenStrong()
+        return make_building(app,root,x,y,w-(index%3)*.50,d,h+(.65 if index%4==0 else 0),index+2,180 if y< -30 else 0)
     i=0
     for x in (-54,-40,40,54):
         for y in (-30,-3,12):
-            building(x,y,10,10,5.8+(i%3)*2.8,i,['MARKET','STUDIO','PHARMACY','CAFE'][i%4] if y==-3 else None);i+=1
+            building(x,y,10,10,5.8+(i%3)*2.8,i);i+=1
     for x in (-52,-38,-12,2,14,40,54):
         building(x,-56,10,9,8.6+(i%3)*2.8,i);i+=1
     for x in (-52,-38,-12,2,14,40,54):

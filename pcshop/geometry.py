@@ -95,7 +95,13 @@ class Builder:
     def lines(self,parent,name,points,color=(.1,.8,.8,1),thickness=2):
         segs=LineSegs(name); segs.setColor(*color); segs.setThickness(thickness); segs.moveTo(*points[0])
         for p in points[1:]: segs.drawTo(*p)
-        return parent.attachNewNode(segs.create())
+        node=segs.create()
+        # Joined line strips can contain 0xffff restart markers. Panda 1.10.16
+        # can mistake these for vertex indices during nested flattenStrong.
+        # Separate segments preserve the appearance and batch without markers.
+        for i in range(node.getNumGeoms()):
+            node.modifyGeom(i).decomposeInPlace()
+        return parent.attachNewNode(node)
 
     def ring(self,parent,pos,radius,color,thickness=.012,steps=32):
         faces=[]

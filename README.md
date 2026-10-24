@@ -1,6 +1,10 @@
-# Latest update: city, courier deliveries and customer hardware
+# Latest update: NPC startup crash fixed
 
-See **CITY_DELIVERY_UPDATE.md** for this build. Your existing save is kept; new hardware configurations appear on future customer tickets.
+See **STARTUP_FIX.md** for the fix to the `GeomTransformer.cxx:1542` startup assertion. Update the project files and run `Start_Windows.bat`; no reinstall or save reset is needed.
+
+# District architecture, characters and carrying animation
+
+See **DISTRICT_ART_UPDATE.md** for this build: six building designs without the generic business signs, a livelier street, refined people, supported PC-carrying poses and clearer daylight. Your existing save is kept. **CITY_DELIVERY_UPDATE.md** describes the preceding courier and customer-hardware update.
 
 # BENCH / 01 — Python PC Repair Workshop
 
