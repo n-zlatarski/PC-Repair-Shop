@@ -1,7 +1,7 @@
 """Two persistent simulated desktops, visible monitor textures and local live CCTV."""
 from panda3d.core import NodePath,OrthographicLens,PerspectiveLens,CardMaker,BitMask32,Texture
 from .shop_equipment import CAMERAS
-OS_MODES={'desktop','browser','shop','guide','network','security','diagnostic','checkout','inventory','files','settings','report','lock'}
+OS_MODES={'desktop','browser','shop','guide','network','security','diagnostic','checkout','inventory','files','settings','report','lock','product_page','receipt'}
 
 class DesktopSystem:
     def __init__(self,app):
@@ -31,13 +31,14 @@ class DesktopSystem:
         if self.dirty:self.refresh()
         for screen in self.screens.values():
             if screen.mode=='diagnostic' and self.app.testing:screen.ui.test_progress(self.app.test_elapsed/4)
-        watching=self.app.mode=='security' or 'security' in self.app.job.desktops.values()
+        watching=self.app.mode=='security'
         self.security_buffer.setActive(watching)
+        for screen in self.screens.values():screen.tick(watching)
 
 class MonitorSurface:
     def __init__(self,app,station,pos,heading):
         from .workshop_ui import Interface
-        self.app=app;self.station=station;self.mode='desktop'
+        self.app=app;self.station=station;self.mode='desktop';self.frames=2
         self.scene=NodePath(station+' desktop texture scene')
         self.buffer=app.win.makeTextureBuffer(station+' desktop',1024,640)
         self.buffer.setClearColor((.03,.08,.12,1));texture=self.buffer.getTexture()
@@ -60,3 +61,7 @@ class MonitorSurface:
         self.card.hide(BitMask32.bit(3));self.card.hide(BitMask32.bit(6))
     def refresh(self,mode):
         self.mode=mode if mode in OS_MODES else 'desktop';self.ui.show(self.mode)
+        self.frames=2;self.buffer.setActive(True)
+    def tick(self,watching):
+        active=self.frames>0 or (self.mode=='security' and watching) or (self.mode=='diagnostic' and self.app.testing)
+        self.buffer.setActive(active);self.frames=max(0,self.frames-1)

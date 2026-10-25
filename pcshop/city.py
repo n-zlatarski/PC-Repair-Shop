@@ -12,16 +12,31 @@ def expand_city(app):
         if solid:app.workshop.block_box(tuple(pos[i]-size[i]/2 for i in range(3)),tuple(pos[i]+size[i]/2 for i in range(3)))
         return n
     road=(.12,.145,.15,1);pave=(.48,.50,.47,1)
-    # Two cross streets and two long avenues form a connected walking loop.
-    for x,w in [(-44,44),(42,48)]:
-        box(root,'extended main street',(x,-16,-.012),(w,7,.023),road)
-        for y in (-11,-21):box(root,'main pavement',(x,y,-.016),(w,3,.028),pave,texture='concrete')
+    def strips(lo,hi,exclusions):
+        cursor=lo
+        for left,right in sorted(exclusions):
+            if right<=cursor or left>=hi:continue
+            if left>cursor:yield cursor,min(left,hi)
+            cursor=max(cursor,right)
+        if cursor<hi:yield cursor,hi
+    for lo,hi in [(-66,-22),(18,66)]:
+        box(root,'extended main street',((lo+hi)/2,-16,-.006),(hi-lo,7,.02),road,texture='asphalt')
+        for y in (-11,-21):
+            for a,c in strips(lo,hi,[(-28.5,-21.5),(21.5,28.5)]):
+                box(root,'main pavement',((a+c)/2,y,-.008),(c-a,3,.025),pave,texture='concrete')
     for x in (-25,25):
-        box(root,'avenue',(x,-14,-.012),(7,100,.025),road)
-        for edge in (-5,5):box(root,'avenue pavement',(x+edge,-14,-.008),(2.8,100,.03),pave,texture='concrete')
+        for a,c in strips(-64,36,[(y-3.5,y+3.5) for y in (-43,-16,23)]):
+            box(root,'avenue',(x,(a+c)/2,-.006),(7,c-a,.02),road,texture='asphalt')
+        for edge in (-5,5):
+            for a,c in strips(-64,36,[(y-6.5,y+6.5) for y in (-43,-16,23)]):
+                box(root,'avenue pavement',(x+edge,(a+c)/2,-.008),(2.8,c-a,.025),pave,texture='concrete')
     for y in (-43,23):
-        box(root,'cross street',(0,y,-.012),(130,7,.024),road)
-        for edge in (-5,5):box(root,'cross pavement',(0,y+edge,-.008),(130,2.8,.03),pave,texture='concrete')
+        box(root,'cross street',(0,y,-.006),(132,7,.02),road,texture='asphalt')
+        for edge in (-5,5):
+            cut=[(-28.5,-21.5),(21.5,28.5)]
+            if y==23 and edge==-5:cut.append((-4.6,.6))
+            for a,c in strips(-66,66,cut):
+                box(root,'cross pavement',((a+c)/2,y+edge,-.008),(c-a,2.8,.025),pave,texture='concrete')
     for x in range(-62,64,6):
         if abs(x+25)>5 and abs(x-25)>5:
             for y in (-16,-43,23):box(root,'lane marking',(x,y,.014),(2.1,.10,.008),(.79,.75,.58,1))
@@ -42,7 +57,7 @@ def expand_city(app):
     for x in (-52,-38,-12,2,14,40,54):
         building(x,33,10,7,5.8+(i%3)*2.8,i);i+=1
     # A small green square behind the workshop is accessible via the rear door.
-    box(root,'courtyard path',(-2,16,-.01),(4,13,.025),pave,texture='concrete')
+    # Driveway supplies the continuous rear walking surface.
     for x,y in [(-15,14),(12,14),(-33,-32),(33,-32),(-18,-34),(15,-34),(-60,8),(59,8),(-10,-49),(10,28)]:
         g=root.attachNewNode('street planting')
         b.cylinder(g,'trunk',(x,y,1.5),(.27,.27,3),(.25,.20,.14,1),'wood')
@@ -59,4 +74,6 @@ def expand_city(app):
     # Low boundary walls mark the walkable district instead of an invisible drop.
     for x in (-65.8,65.8):box(root,'district edge',(x,-14,.60),(.20,104,1.20),(.35,.38,.34,1),True)
     for y in (-65.8,37.8):box(root,'district edge',(0,y,.60),(132,.20,1.20),(.35,.38,.34,1),True)
+    from .performance import batch_joint_geometry
+    batch_joint_geometry(root)
     return root

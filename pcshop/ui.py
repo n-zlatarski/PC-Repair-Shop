@@ -1,5 +1,5 @@
 """Resolution-independent interface in a 1280 x 800 design space."""
-from panda3d.core import TextNode, Filename
+from panda3d.core import TextNode, Filename, Point3
 from direct.gui.DirectGui import DirectFrame, DirectButton, DGG
 from .geometry import ASSETS
 from .model import PARTS
@@ -17,6 +17,8 @@ class Interface:
         self.mono=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Terminal.ttf')).getFullpath()); self.mono.setPixelsPerUnit(36)
         # aspect2d is a PGTop: GUI regions need it for actual mouse hit detection.
         self.root=app.aspect2d.attachNewNode('interface'); self.resize()
+        self.desktop_backdrop=DirectFrame(parent=app.render2d,frameSize=(-1,1,-1,1),frameColor=(.025,.045,.09,1),relief=DGG.FLAT,state=DGG.DISABLED)
+        self.desktop_backdrop.setBin('fixed',800);self.desktop_backdrop.hide()
         self.hud=self.root.attachNewNode('HUD'); self.modal=self.root.attachNewNode('modal')
         self.widgets=[]; self.buttons={}; self.order=0; self.modal_order=1000; self.toast_order=10000
         self.root.setDepthTest(False); self.root.setDepthWrite(False)
@@ -41,7 +43,16 @@ class Interface:
 
     def resize(self):
         aspect=self.app.getAspectRatio()
-        self.root.setPos(-aspect,0,1); self.root.setScale(2*aspect/1280,1,2/800)
+        scale=min(2/800,2*aspect/1280)
+        self.root.setPos(-640*scale,0,400*scale);self.root.setScale(scale,1,scale)
+
+    def mouse_to_design(self,x,y):
+        p=self.root.getRelativePoint(self.app.render2d,Point3(x,0,y))
+        return p.x,-p.z
+
+    def design_to_pixels(self,x,y):
+        p=self.app.render2d.getRelativePoint(self.root,Point3(x,0,-y))
+        return ((p.x+1)*self.app.win.getXSize()/2,(1-p.z)*self.app.win.getYSize()/2)
 
     def layer(self,node,parent):
         if parent==self.modal: self.modal_order+=1; order=self.modal_order
@@ -143,8 +154,9 @@ class Interface:
         self.button('journal','VIEW TICKET / REPORT',475,365,330,self.app.open_ticket)
         self.button('new','RESET WORKSHOP',475,430,330,lambda:self.app.open_mode('reset'))
         self.button('quit','SAVE AND QUIT',475,495,330,self.app.quit)
-        self.label(self.modal,'F6  Film finish     F7  Sun shadows',475,566,12,CYAN,width=315)
-        self.label(self.modal,'Progress saves after each service action.',475,592,13,MUTED,width=315)
+        self.label(self.modal,'F11 Fullscreen   F8 FPS   F9 Graphics',475,566,12,CYAN,width=315)
+        self.label(self.modal,'F6 Contrast   F7 Shadows',475,588,12,CYAN,width=315)
+        self.label(self.modal,'Progress saves after each service action.',475,616,12,MUTED,width=315)
 
     def reset_confirm(self):
         self.rect(self.modal,0,0,1280,800,(.025,.05,.06,.88)); self.rect(self.modal,370,230,910,560,BG)

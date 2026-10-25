@@ -1,3 +1,4 @@
+from pcshop.delivery_route import HANDOVER,STOP
 """Delivery state/save regression plus rendered city, residents and new hardware."""
 import json
 from panda3d.core import Vec3,Filename,Point3,Point2
@@ -36,7 +37,7 @@ def install_checks(app,output):
         j.courier.update(phase='waiting',elapsed=0.);j.pending[0]['status']='waiting';j.receive()
         check(j.inventory==['lpx16','mx500'] and j.money==cash,'Physical handover transfers exact order once')
         blocked(j.receive,'Repeated handover cannot duplicate parts')
-        j.checkout({'crucial8':1});j.tick(60);check(j.courier['phase']=='waiting','Queued shipment gets another van trip')
+        j.checkout({'crucial8':1});j.tick(120);check(j.courier['phase']=='waiting','Queued shipment gets another van trip')
         j.receive();j.tick(60);check(j.courier['phase']=='idle' and not j.pending,'Driver returns, re-enters and leaves')
         # Legacy pending orders migrate into the new courier route.
         data={'version':2,**__import__('dataclasses').asdict(RepairJob())};data.pop('courier')
@@ -70,23 +71,23 @@ def install_checks(app,output):
         # Advance the real itinerary in small steps: no teleporting to handover.
         app.job=RepairJob();app.job.checkout({'rtx3060':1,'lpx16':1})
         app.player=Vec3(-2,-8.5,1.6);phases=[];positions=[]
-        for _ in range(700):
+        for _ in range(1300):
             app.job.tick(.05,pause_courier=app.courier.blocked());app.courier.sync(.05)
             phase=app.job.courier['phase']
             if not phases or phase!=phases[-1]:phases.append(phase)
             if phase=='approach':positions.append(app.courier.root.getX())
             if phase=='waiting':break
-        check(phases==['idle','approach','door_open','exit','walk','waiting'],'Integrated order drives, opens door, exits and walks before collection')
+        check(phases==['idle','approach','reverse','door_open','exit','walk','cargo_open','load','to_handover','waiting'],'Integrated order drives, opens door, exits and walks before collection')
         check(len(positions)>100 and positions[-1]>positions[0]+50,'Vehicle travels through the district instead of spawning at shop')
         check(not app.job.inventory,'Watching the arrival never grants parts automatically')
         # Check every visual stage against the saved state.
-        for phase,elapsed,name in [('approach',12,'van_driver_inside'),('exit',.8,'driver_exits'),('walk',1.7,'courier_walks'),('waiting',0,'courier_handover')]:
+        for phase,elapsed,name in [('reverse',4,'van_driver_inside'),('exit',.8,'driver_exits'),('cargo_open',1.4,'rear_cargo_open'),('to_handover',1.7,'courier_walks'),('waiting',0,'courier_handover')]:
             app.job.courier.update(phase=phase,elapsed=elapsed)
             for p in app.job.pending:p['status']='waiting' if phase=='waiting' else 'on_route'
-            app.courier.sync(0);aim((7,-9,2.0),(3.8,-12.8,1.05));yield from wait();capture(name)
+            app.courier.sync(0);aim((4,9,2.3),(-2,13,1.05));yield from wait();capture(name)
             check(not app.courier.driver.root.isHidden(),'Driver visible: '+phase)
         app.close_mode();app.job.courier.update(phase='waiting',elapsed=0);app.courier.sync(0)
-        aim((3.8,-8.5,1.6),(3.8,-10.3,1.05));yield from wait()
+        aim((HANDOVER.x,HANDOVER.y-1.8,1.6),(HANDOVER.x,HANDOVER.y,1.05));yield from wait()
         check(app.interaction.cast()=='delivery','Actual E ray selects courier outside')
         app.interact();check(app.mode=='delivery' and not app.job.inventory,'Courier opens package inspection before handing over stock')
         app.unpack_delivery();check(app.job.inventory==['rtx3060','lpx16'],'Outside collection adds the ordered parts')

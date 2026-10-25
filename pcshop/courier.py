@@ -4,8 +4,7 @@ from panda3d.core import Vec3,BitMask32,TransparencyAttrib,TextNode
 from .interaction import WORLD
 from .delivery_rules import DURATIONS
 from .avatars import animate_resident
-STOP=Vec3(3,-13.4,0)
-HANDOVER=Vec3(3.8,-10.3,0)
+from .delivery_route import STOP,HANDOVER,CARGO,pose,walk
 
 class Courier:
     def __init__(self,app):
@@ -25,17 +24,37 @@ class Courier:
         r=self.root;ivory=(.73,.75,.73,1);black=(.045,.055,.059,1);teal=(.05,.25,.28,1)
         box=lambda name,pos,size,c=ivory:b.box(r,name,pos,size,c)
         box('undercarriage',(0,0,.40),(1.88,3.9,.23),black)
-        box('cargo body',(0,.72,1.22),(1.98,2.65,1.58))
+        for x in (-.96,.96):box('cargo side wall',(x,.72,1.22),(.06,2.65,1.58))
+        box('cargo floor',(0,.72,.48),(1.98,2.65,.10))
+        box('cargo front wall',(0,-.58,1.22),(1.98,.06,1.58))
+        self.cargo_doors=[]
+        for side in (-1,1):
+            door=r.attachNewNode('rear cargo door');door.setPos(side*.99,2.045,.48)
+            b.box(door,'rear door panel',(-side*.48,0,.76),(.96,.065,1.50),ivory)
+            b.box(door,'door inset',(-side*.48,.04,.76),(.80,.025,1.32),(.64,.68,.66,1))
+            b.box(door,'lock bar',(-side*.23,.065,.76),(.025,.025,1.28),black)
+            b.box(door,'rear handle',(-side*.31,.08,.78),(.20,.035,.04),black)
+            self.cargo_doors.append((side,door))
+        box('rear loading step',(0,2.15,.40),(1.95,.27,.09),black)
+        self.reverse_lamps=[]
+        for x in (-.82,.82):
+            box('tail lamp',(x,2.06,.64),(.18,.025,.16),(.52,.08,.05,1))
+            self.reverse_lamps.append(box('reverse lamp',(x,2.077,.55),(.13,.015,.05),(.5,.52,.49,1)))
+        self.cargo_package=r.attachNewNode('shipment inside cargo bay')
+        b.box(self.cargo_package,'shipping carton',(0,1.65,.70),(.46,.35,.31),(.57,.40,.23,1),'wood')
+        b.box(self.cargo_package,'packing tape',(0,1.65,.86),(.055,.35,.008),(.74,.65,.45,1))
         box('cargo roof',(0,.72,2.02),(2.02,2.72,.09))
         box('cab floor',(0,-1.23,.61),(1.94,1.35,.25))
-        box('bonnet',(0,-2.02,.91),(1.94,.50,.34))
+        from .geometry import mesh
+        hood=[(-.89,-2.28,.73),(.89,-2.28,.73),(.94,-1.78,.73),(-.94,-1.78,.73),(-.83,-2.28,.94),(.83,-2.28,.94),(.91,-1.78,1.13),(-.91,-1.78,1.13)]
+        hood_node=r.attachNewNode(mesh('sloped commercial van bonnet',[[hood[i] for i in face] for face in [(0,1,2,3),(4,7,6,5),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)]]));hood_node.setColor(*ivory)
         box('cab roof',(0,-1.26,1.98),(1.99,1.45,.10))
         box('bulkhead',(0,-.57,1.37),(1.94,.08,1.1),teal)
         for x in (-.94,.94):
-            box('windshield pillar',(x,-1.92,1.52),(.07,.065,.91))
+            box('windshield pillar',(x,-1.87,1.52),(.07,.065,.91)).setP(-15)
             box('rear cab pillar',(x,-.60,1.50),(.07,.065,.92))
         # Clear glazing and a real open cabin make the seated driver visible.
-        glass=box('windscreen',(0,-1.96,1.55),(1.82,.012,.70),(.34,.50,.53,.12))
+        glass=box('windscreen',(0,-1.90,1.55),(1.82,.012,.70),(.34,.50,.53,.12));glass.setP(-15)
         glass.setTransparency(TransparencyAttrib.MAlpha);glass.setDepthWrite(False);glass.setTextureOff(1)
         box('dashboard',(0,-1.73,1.13),(1.82,.29,.16),black)
         for x in (-.47,.47):
@@ -66,16 +85,21 @@ class Courier:
         b.shadow(r,(0,0,.015),(2.5,5.0),.8)
         self.obstacle=[0,0,0,0];app.workshop.dynamic_obstacles=[self.obstacle]
         self.blocker=app.interaction.box(self.root,'blocker',(0,-.10,1.02),(2.05,4.55,2.02))
+        from .performance import batch_joint_geometry
+        batch_joint_geometry(self.root,exclude=self.reverse_lamps)
         self.last_phase=None;self.sync(0)
     def blocked(self):
-        phase=self.app.job.courier['phase'];p=self.app.player
-        if phase in ('approach','depart'):
-            x=self.root.getX()
-            return x-2.7<p.x<x+3.5 and abs(p.y-STOP.y)<1.5
-        if phase in ('walk','return'):
-            direction=HANDOVER-self.driver.root.getPos() if phase=='walk' else self.app.render.getRelativePoint(self.root,Vec3(1.5,-1.1,0))-self.driver.root.getPos()
+        c=self.app.job.courier;phase=c['phase'];p=self.app.player
+        if phase in ('approach','reverse','depart'):
+            t=min(1,c['elapsed']/DURATIONS[phase]);a,_=pose(phase,t);b,_=pose(phase,min(1,t+.015))
+            direction=b-a
+            if direction.lengthSquared()<.00001:return False
+            direction.normalize();delta=p-a;delta.z=0
+            along=direction.dot(delta);cross=abs(direction.x*delta.y-direction.y*delta.x)
+            return -2.4<along<3.8 and cross<1.35
+        if phase in ('walk','return','to_handover','to_cargo'):
             delta=p-self.driver.root.getPos();delta.z=0
-            return delta.length()<.75 and direction.dot(delta)>0
+            return delta.length()<.75 and self.driver_direction.dot(delta)>0
         return False
     def sync(self,dt):
         c=self.app.job.courier;phase=c['phase'];t=min(1,c['elapsed']/DURATIONS.get(phase,1));a=self.app
@@ -85,34 +109,50 @@ class Courier:
         self.blocker.node().setIntoCollideMask(WORLD if active else BitMask32.allOff())
         self.driver.collider.node().setIntoCollideMask(WORLD if phase=='waiting' else BitMask32.allOff())
         if not active:self.obstacle[:]=[1000,1000,1000,1000];return
-        x=-62+65*(1-(1-t)**2) if phase=='approach' else 3+59*t*t if phase=='depart' else 3
-        self.root.setPos(x,STOP.y,0);self.root.setH(90)
-        self.obstacle[:]=[x-2.40,x+2.40,STOP.y-1.1,STOP.y+1.1]
+        pos,h=pose(phase,t);self.root.setPos(pos);self.root.setH(h)
+        rad=math.radians(h);sx=abs(math.cos(rad))*1.1+abs(math.sin(rad))*2.4;sy=abs(math.sin(rad))*1.1+abs(math.cos(rad))*2.4
+        self.obstacle[:]=[pos.x-sx,pos.x+sx,pos.y-sy,pos.y+sy]
         for wheel in self.wheels:
-            if phase in ('approach','depart'):wheel.setP(wheel.getP()-dt*650)
-        door_angle=75*t if phase=='door_open' else 75*(1-t) if phase=='door_close' else 75 if phase in ('exit','walk','waiting','handover','return','enter') else 0
-        self.door.setH(-door_angle)
-        seat=self.app.render.getRelativePoint(self.root,Vec3(.47,-1.02,.13))
-        step=self.app.render.getRelativePoint(self.root,Vec3(1.50,-1.10,0))
-        seated=phase in ('approach','door_open','door_close','depart')
+            if phase in ('approach','reverse','depart'):wheel.setP(wheel.getP()+dt*650*(1 if phase=='reverse' else -1))
+        for lamp in self.reverse_lamps:
+            lamp.setColor((.95,.96,.83,1) if phase=='reverse' else (.35,.36,.34,1))
+            lamp.setLightOff(1) if phase=='reverse' else lamp.clearLight()
+        cab_open=('exit','walk','cargo_open','load','to_handover','waiting','handover','to_cargo','cargo_close','return','enter')
+        angle=75*t if phase=='door_open' else 75*(1-t) if phase=='door_close' else 75 if phase in cab_open else 0
+        self.door.setH(-angle)
+        angle=105*t if phase=='cargo_open' else 105*(1-t) if phase=='cargo_close' else 105 if phase in ('load','to_handover','waiting','handover','to_cargo') else 0
+        for side,door in self.cargo_doors:door.setH(-side*angle)
+        loaded=phase in ('approach','reverse','door_open','exit','walk','cargo_open') or phase=='load' and t<.5
+        self.cargo_package.show() if loaded else self.cargo_package.hide()
+        seat=a.render.getRelativePoint(self.root,Vec3(.47,-1.02,.13))
+        step=a.render.getRelativePoint(self.root,Vec3(1.50,-1.10,0))
+        route=[step,Vec3(-3.50,11.35,0),Vec3(-3.50,10.70,0),CARGO]
+        handroute=[CARGO,Vec3(-.35,10.70,0),HANDOVER]
+        seated=phase in ('approach','reverse','door_open','door_close','depart')
+        self.driver_direction=Vec3(0,1,0)
         if seated:pos=seat
         elif phase=='exit':pos=seat+(step-seat)*(t*t*(3-2*t))
         elif phase=='enter':pos=step+(seat-step)*(t*t*(3-2*t))
-        elif phase=='walk':pos=step+(HANDOVER-step)*t
-        elif phase=='return':pos=HANDOVER+(step-HANDOVER)*t
-        else:pos=HANDOVER
+        elif phase in ('walk','return'):pos,self.driver_direction=walk(route if phase=='walk' else list(reversed(route)),t)
+        elif phase in ('to_handover','to_cargo'):pos,self.driver_direction=walk(handroute if phase=='to_handover' else list(reversed(handroute)),t)
+        elif phase in ('cargo_open','load','cargo_close'):pos=Vec3(CARGO)
+        else:pos=Vec3(HANDOVER)
         self.driver.root.setPos(pos)
-        self.driver.parcel.show() if phase in ('walk','waiting','handover') else self.driver.parcel.hide()
+        carrying=phase in ('to_handover','waiting','handover') or phase=='load' and t>=.5
+        self.driver.parcel.show() if carrying else self.driver.parcel.hide()
         self.driver.carry_reach=.04*math.sin(math.pi*t) if phase=='handover' else 0
         if seated or phase in ('exit','enter'):
-            self.driver.root.setH(90)
-            animate_resident(self.driver,False,dt)
+            self.driver.root.setH(h);animate_resident(self.driver,False,dt)
             blend=1 if seated else 1-t if phase=='exit' else t
             for leg,knee in zip(self.driver.legs,self.driver.knees):leg.setP(-80*blend);knee.setP(85*blend)
             for arm,elbow in zip(self.driver.arms,self.driver.elbows):arm.setP(-32*blend);elbow.setP(-48*blend-9*(1-blend))
         else:
-            target=HANDOVER-step if phase=='walk' else step-HANDOVER if phase=='return' else a.player-pos
-            self.driver.root.setH(math.degrees(math.atan2(target.x,-target.y)))
-            animate_resident(self.driver,phase in ('walk','return'),dt)
-        if phase=='waiting' and self.last_phase!=phase and hasattr(a,'ui'):a.ui.toast('Parts Express is outside. Meet the courier on the front pavement [E].')
+            moving=phase in ('walk','return','to_handover','to_cargo')
+            direction=self.driver_direction if moving else Vec3(0,1,0) if phase in ('cargo_open','load','cargo_close') else a.player-pos
+            self.driver.root.setH(math.degrees(math.atan2(direction.x,-direction.y)))
+            animate_resident(self.driver,moving,dt)
+            if phase in ('cargo_open','cargo_close'):
+                self.driver.arms[0].setP(-65*math.sin(math.pi*t));self.driver.elbows[0].setP(-30)
+            if phase=='load':self.driver.torso.setP(-14*math.sin(math.pi*t))
+        if phase=='waiting' and self.last_phase!=phase and hasattr(a,'ui'):a.ui.toast('Parts Express is waiting in the rear driveway. Meet the courier [E].')
         self.last_phase=phase

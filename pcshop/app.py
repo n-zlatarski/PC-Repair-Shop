@@ -29,7 +29,7 @@ class WorkshopApp(ShowBase):
         self.start_query='';self.start_open={};self.window_maximized={};self.minimized_apps={}
         self.mode=None;self.active_terminal=None; self.testing=False; self.test_elapsed=0; self.result=None
         self.product_key='replacement';self.product_back='shop';self.delivery_index=0
-        self.cart={};self.shop_category='All';self.shop_search='';self.shop_desc=False;self.shop_page=0;self.inventory_page=0;self.autosave_time=0;self.last_waiting=False
+        self.cart={};self.shop_category='All';self.shop_brand='All';self.browser_history={};self.browser_index={};self.shop_search='';self.shop_desc=False;self.shop_page=0;self.inventory_page=0;self.autosave_time=0;self.last_waiting=False
         self.selected_component='RAM'; self.selected_part='replacement'
         self.hover=None; self.keys={}; self.player=Vec3(*SPAWN); self.heading=0; self.pitch=-7
         self.mouse_ready=False; self.repair_distance=2.15
@@ -42,8 +42,14 @@ class WorkshopApp(ShowBase):
         self.street_life=StreetLife(self)
         self.ui=Interface(self)
         self.equipment=ShopEquipment(self);self.service.tools.build_board()
+        for light in self.room_lights:
+            for target in (self.workshop.static,self.pc.root,self.equipment.storage.root,self.service.root):target.setLight(light)
         self.graphics=Presentation(self)
         self.desktops=DesktopSystem(self)
+        from .held_stock import HeldStock
+        self.held_stock=HeldStock(self)
+        from .display import Display
+        self.display=Display(self)
         self.bind_inputs(); self.sync_pc(); self.update_camera()
         self.taskMgr.add(self.update,'workshop update')
         self.open_mode('welcome' if self.job.stage=='offered' else 'pause')
@@ -62,14 +68,21 @@ class WorkshopApp(ShowBase):
         self.accept('mouse1',self.service.down);self.accept('mouse1-up',self.service.up)
         self.accept('mouse3',self.start_orbit);self.accept('mouse3-up',self.stop_orbit)
         self.accept('r',self.reset_view)
+        self.fps_visible=False;self.accept('f8',self.toggle_fps)
         self.accept('wheel_up',self.zoom,[-.10]); self.accept('wheel_down',self.zoom,[.10])
         self.accept('window-event',self.window_event)
+
+    def toggle_fps(self):
+        self.fps_visible=not self.fps_visible;self.setFrameRateMeter(self.fps_visible)
 
     def set_key(self,key,value): self.keys[key]=value
 
     def window_event(self,window):
-        if not window or not hasattr(self,'ui'): return
-        props=window.getProperties(); self.ui.resize()
+        ShowBase.windowEvent(self,window)
+        if window!=self.win or not hasattr(self,'ui'): return
+        props=window.getProperties()
+        if hasattr(self,'display'):self.display.resize()
+        else:self.ui.resize()
         if not props.getForeground() and self.mode is None:
             self.keys.clear(); self.open_mode('pause')
 
@@ -91,18 +104,36 @@ class WorkshopApp(ShowBase):
         if self.testing and mode!='diagnostic': self.testing=False;self.result=None
         if self.mode=='repair' and mode!='repair': self.service.cancel();self.pc.highlight(None); self.camLens.setFov(75)
         if mode=='repair' and self.mode!='repair':self.service.yaw=0;self.service.pitch=0
+        if self.active_terminal and mode in ('browser','shop','checkout','guide','network','product_page','receipt') and not getattr(self,'history_replay',False):
+            station=self.active_terminal;rows=self.browser_history.setdefault(station,[]);index=self.browser_index.get(station,-1)
+            entry=(mode,self.product_key if mode=='product_page' else None)
+            if index<0 or rows[index]!=entry:
+                del rows[index+1:];rows.append(entry);self.browser_index[station]=len(rows)-1
+        if self.active_terminal and mode=='product_page':self.job.desktop_products[self.active_terminal]=self.product_key
         self.mode=mode; self.keys.clear(); self.capture_mouse(False)
+        self.set_world_rendering(not (self.active_terminal and mode in OS_MODES and mode!='security'))
         self.ui.toast_node.hide(); self.ui.toast_until=0; self.ui.show(mode)
         if mode=='repair': self.camLens.setFov(44)
+        if hasattr(self,'display'):self.display.resize()
         self.update_camera()
+
+    def set_world_rendering(self,enabled):
+        self.cam.node().setActive(enabled)
+        shadow=self.sun.getShadowBuffer(self.win.getGsg())
+        if shadow:shadow.setActive(enabled)
+        if hasattr(self,'graphics'):
+            self.graphics.world_enabled=enabled
+            for buffer in self.graphics.manager.buffers:buffer.setActive(enabled)
 
     def close_mode(self):
         if self.active_terminal:self.start_open[self.active_terminal]=False
         if self.active_terminal:self.save()
         if self.testing:
             self.testing=False; self.ui.toast('Diagnostic cancelled. Run the full test to record a result.')
+        self.set_world_rendering(True)
         self.service.cancel();self.keys.clear();self.active_terminal=None;self.mode=None; self.pc.highlight(None); self.hover=None
         self.camLens.setFov(75); self.update_camera(); self.ui.show(None); self.capture_mouse(True)
+        if hasattr(self,'display'):self.display.resize()
 
     def escape(self):
         if self.active_terminal and self.start_open.get(self.active_terminal):
@@ -135,6 +166,9 @@ class WorkshopApp(ShowBase):
 
     def prompt_for(self,target):
         j=self.job
+        if j.held_part:
+            if target=='storage_rack' or (target and target.startswith('stored_part:')):return '[E] Return held part to shelf'
+            if target=='bench' or (target=='pc' and j.stage in ('bench','complete')):return '[E] Place held part on workbench tray'
         if target=='pc':
             if j.stage=='offered': return '[E] Read customer ticket'
             if j.stage=='accepted': return '[E] Pick up customer PC'
@@ -153,7 +187,10 @@ class WorkshopApp(ShowBase):
             return '[E] Equip '+TOOLS[target.split(':',1)[1]][0]
         if target=='router':return '[E] Inspect workshop network'
         if target and target.startswith('camera:'):return 'SECURITY CAMERA / View feeds on a computer'
-        if target and target.startswith('shelf_part:'):return '[E] Inspect '+PARTS[target.split(':',1)[1]]['name']+' / display sample'
+        if target=='storage_rack':return '[E] Store usable tray parts on shelves'
+        if target and target.startswith('stored_part:'):
+            i=int(target.split(':')[1])
+            return '[E] Take '+PARTS[j.stored_parts[i]]['name'] if i<len(j.stored_parts) else ''
         if target=='customer':return '[E] Speak to '+j.customer
         if target and target.startswith('collector:'):return '[E] Hand over repaired PC / receive payment'
         if target and target.startswith('visitor:'):return '[E] Greet visitor'
@@ -164,6 +201,10 @@ class WorkshopApp(ShowBase):
         if self.mode: return
         target=self.interaction.cast()
         try:
+            if self.job.held_part and (target=='storage_rack' or target and target.startswith('stored_part:') or target=='bench' or target=='pc' and self.job.stage in ('bench','complete')):
+                shelf=target=='storage_rack' or target.startswith('stored_part:')
+                self.job.place_held(shelf);self.equipment.storage.sync();self.held_stock.sync();self.save()
+                self.ui.toast('Component returned to shelf.' if shelf else 'Component placed on the workbench tray. Enter repair mode to fit it.');return
             if target=='pc':
                 if self.job.stage=='offered': self.open_mode('ticket')
                 elif self.job.stage=='accepted': self.job.pickup(); self.sync_pc(); self.save()
@@ -177,7 +218,12 @@ class WorkshopApp(ShowBase):
             elif target=='shop_terminal':self.use_terminal('reception')
             elif target=='router':self.open_mode('network')
             elif target and target.startswith('tool_pick:'):self.service.tools.select(target.split(':',1)[1])
-            elif target and target.startswith('shelf_part:'):self.inspect_product(target.split(':',1)[1],'inventory')
+            elif target and target.startswith('stored_part:'):
+                key=self.job.take_stored(int(target.split(':')[1]));self.equipment.storage.sync();self.save()
+                self.held_stock.sync();self.ui.toast('Holding '+PARTS[key]['name']+'. Press E at the bench to set it down, or at a rack to return it.')
+            elif target=='storage_rack':
+                count=self.job.store_usable_parts();self.equipment.storage.sync();self.save()
+                self.ui.toast(f'Stored {count} part(s). Look at a shelf component and press E to take it.')
             elif target=='customer':self.open_ticket()
             elif target and target.startswith('visitor:'):self.ui.toast('Hello! Just looking around. Good luck with the workshop.')
             elif target and target.startswith('collector:'):
@@ -195,7 +241,7 @@ class WorkshopApp(ShowBase):
         except RuleError as e: self.ui.toast(str(e))
 
     def use_terminal(self,station):
-        self.active_terminal=station;self.open_mode(self.job.desktops.get(station,'desktop'))
+        self.active_terminal=station;self.product_key=self.job.desktop_products.get(station,'replacement');self.open_mode(self.job.desktops.get(station,'desktop'))
     def launch_app(self,mode):
         if not self.active_terminal:return
         self.start_open[self.active_terminal]=False
@@ -220,8 +266,29 @@ class WorkshopApp(ShowBase):
     def navigate_browser(self,address):
         url=address.strip().lower().removeprefix('https://').removeprefix('http://').rstrip('/')
         mode={'about:start':'browser','bench://start':'browser','partline.shop':'shop','partline.shop/checkout':'checkout','guide.bench':'guide','router.bench':'network'}.get(url)
+        if url.startswith('partline.shop/product/') and url.rsplit('/',1)[1] in self.job.stock:self.view_product(url.rsplit('/',1)[1]);return
+        if url=='partline.shop/orders':mode='receipt'
         if mode:self.launch_app(mode)
         else:self.ui.toast('This training browser supports partline.shop, guide.bench and router.bench.')
+    def filtered_products(self):
+        keys=[k for k,p in PARTS.items() if k in self.job.stock and (self.shop_category=='All' or p['category']==self.shop_category) and (self.shop_brand=='All' or p['manufacturer']==self.shop_brand) and self.shop_search.lower() in (p['name']+' '+p['spec']).lower()]
+        return sorted(keys,key=lambda k:PARTS[k]['price'],reverse=self.shop_desc)
+    def filter_brand(self,value):
+        if value==self.shop_brand:return
+        self.shop_brand=value;self.shop_page=0;self.ui.show('shop')
+    def view_product(self,key):self.product_key=key;self.open_mode('product_page')
+    def browser_step(self,delta):
+        station=self.active_terminal;rows=self.browser_history.get(station,[]);index=self.browser_index.get(station,-1)+delta
+        if not 0<=index<len(rows):return
+        self.browser_index[station]=index;mode,key=rows[index]
+        if key:self.product_key=key
+        self.history_replay=True
+        try:self.open_mode(mode)
+        finally:self.history_replay=False
+    def page_cart(self,delta):self.cart_page=max(0,getattr(self,'cart_page',0)+delta);self.ui.show('checkout')
+    def page_receipt(self,delta):
+        self.receipt_index=max(0,min(len(self.job.orders)-1,getattr(self,'receipt_index',len(self.job.orders)-1)+delta));self.receipt_page=0;self.ui.show('receipt')
+    def page_receipt_items(self,pages):self.receipt_page=(getattr(self,'receipt_page',0)+1)%pages;self.ui.show('receipt')
     def select_camera(self,index):
         self.desktops.set_channel(index);self.ui.show('security')
     def inspect_product(self,key,back):
@@ -235,10 +302,10 @@ class WorkshopApp(ShowBase):
             self.courier.sync(0)
         except RuleError as e:self.ui.toast(str(e));return
         self.neighborhood.sync();self.save();self.close_mode()
-        self.ui.toast('Retail packages unpacked. Parts are in workshop stock (I).')
+        self.ui.toast('Retail packages unpacked. Parts are in your repair tray (I); STORE returns them to the racks.')
     def mouse_in_model_area(self):
         if not self.mouseWatcherNode.hasMouse(): return False
-        m=self.mouseWatcherNode.getMouse(); x=(m.x+1)*640; y=(1-m.y)*400
+        m=self.mouseWatcherNode.getMouse(); x,y=self.ui.mouse_to_design(m.x,m.y)
         return 310<x<970 and 90<y<725
 
     def reset_view(self):
@@ -294,7 +361,7 @@ class WorkshopApp(ShowBase):
     def update(self,task):
         dt=min(self.clock.getDt(),.05); self.time+=dt
         if self.mode not in ('pause','reset','welcome'):
-            self.job.tick(dt,pause_courier=self.courier.blocked());self.courier.sync(dt);self.customers.update(dt);self.street_life.update(dt);self.neighborhood.sync()
+            self.job.tick(dt,pause_courier=self.courier.blocked());self.courier.sync(dt);self.customers.update(dt);self.street_life.update(dt);self.neighborhood.sync();self.equipment.storage.sync()
             self.autosave_time+=dt
             if self.autosave_time>5:self.save();self.autosave_time=0
             if self.mode=='ticket' and self.customers.at_counter!=self.last_waiting:self.ui.show('ticket')
@@ -322,6 +389,7 @@ class WorkshopApp(ShowBase):
                 except RuleError as e: self.ui.toast(str(e))
         if self.job.connected:
             for rotor in self.pc.rotors: rotor.setR((rotor.getR()+dt*210)%360)
+        self.held_stock.sync()
         self.desktops.update(dt)
         self.graphics.update(self.time)
         self.ui.update(self.time)
@@ -356,13 +424,17 @@ class WorkshopApp(ShowBase):
         qty=max(0,min(self.job.stock[key],self.cart.get(key,0)+delta))
         if qty:self.cart[key]=qty
         else:self.cart.pop(key,None)
-        self.ui.show('shop')
+        self.ui.show(self.mode if self.mode in ('shop','checkout','product_page') else 'shop')
     def clear_cart(self):
         self.cart.clear();self.open_mode('shop')
     def checkout(self):
         try:
-            total=self.job.checkout(self.cart);self.cart.clear();self.save();self.open_mode('shop')
-            self.ui.toast(f'Order placed: ${total}. A courier will drive here. Meet them outside to collect the package.')
+            total=self.job.checkout(self.cart);self.cart.clear();self.receipt_index=len(self.job.orders)-1;self.save();self.open_mode('receipt')
+            self.ui.toast(f'Order placed: ${total}. Meet the courier in the rear driveway to collect the package.')
+        except RuleError as e:self.ui.toast(str(e))
+    def store_stock(self,key):
+        try:
+            self.job.store_part(key);self.equipment.storage.sync();self.save();self.ui.show('inventory')
         except RuleError as e:self.ui.toast(str(e))
     def return_stock(self,key):
         if key in self.job.inventory and PARTS[key]['price']>0:

@@ -60,12 +60,12 @@ def _build_product(b,n,key):
         for i in range(28):
             z=-.098+i*.0072
             if abs(z-.012)>.009:box('gold edge finger',(-.013,.051,z),(.007,.004,.0045),GOLD)
-        text=label(b,n,{'bare':'CRUCIAL','lpx':'LPX'}.get(style,'FURY'),(0,-.058,.0),.014 if style=='bare' else .019,BLACK if style=='bare' else WHITE);text.setR(90)
+        text=label(b,n,p.get('model',{'bare':'CRUCIAL','lpx':'LPX'}.get(style,'FURY'))[:14],(0,-.058,.0),.014 if style=='bare' else .019,BLACK if style=='bare' else WHITE);text.setR(90)
         text=label(b,n,p.get('brand','BEAST'),(0,-.058,-.062),.008,SILVER);text.setR(90)
         box('capacity sticker',(0,-.058,.081),(.03,.003,.025),WHITE)
         label(b,n,str(p['capacity']),(0,-.061,.077),.012,BLACK)
     elif cat=='GPU':
-        amd=key.startswith('rx');ventus=p.get('style')=='ventus';accent=RED if amd else (.48,.49,.50,1)
+        amd=key.startswith('rx') or 'RX ' in p['name'];ventus=p.get('style')=='ventus';accent=RED if amd else (.48,.49,.50,1)
         box('graphics PCB',(0,.015,.029),(.385,.218,.005),PCB)
         box('vented cooler body',(0,0,-.003),(.39,.255,.068),DARK)
         for i in range(32):box('aluminium heatsink fin',(-.178+i*.0115,-.004,-.004),(.003,.237,.048),SILVER)
@@ -111,7 +111,7 @@ def _build_product(b,n,key):
         for i in range(9):
             for j in range(9):box('underside contacts',(-.044+i*.011,.013,-.044+j*.011),(.004,.006 if amd else .001,.004),GOLD)
     elif cat=='Motherboard':
-        amd=key=='b550'
+        amd='AM4' in p['spec']
         box('ATX motherboard',(0,0,0),(.40,.012,.42),(.07,.075,.08,1))
         for i in range(12):
             x=-.18+i*.03
@@ -123,8 +123,8 @@ def _build_product(b,n,key):
         for i in range(8):box('heatsink rib',(-.183+i*.0035,-.052,.08),(.0015,.008,.17),DARK)
         for z in (-.10,-.148):box('PCIe slot',(-.04,-.017,z),(.24,.022,.018),WHITE if z==-.10 else BLACK)
         box('chipset heatsink',(.105,-.02,-.13),(.072,.025,.069),SILVER)
-        label(b,n,'ASUS PRIME',(0,-.016,-.195),.019,WHITE)
-        label(b,n,'B550-PLUS / AM4' if amd else 'B560-PLUS / LGA1200',(-.02,-.017,-.065),.010,SILVER)
+        label(b,n,p.get('brand','ASUS PRIME'),(0,-.016,-.195),.019,WHITE)
+        label(b,n,p.get('model','B550-PLUS / AM4' if amd else 'B560-PLUS / LGA1200'),(-.02,-.017,-.065),.010,SILVER)
         for x in (-.16,-.13,-.1,-.07,.0,.03):
             cap=b.cylinder(n,'solid capacitor',(x,-.02,.142),(.014,.014,.023),SILVER,'metal');cap.setP(90)
         for x,z in [(-.185,-.19),(.183,-.19),(-.185,.191),(.183,.191)]:
@@ -134,11 +134,11 @@ def _build_product(b,n,key):
     elif cat=='PSU':
         box('power supply',(0,0,0),(.23,.36,.12),DARK)
         box('CX series label',(0,-.182,0),(.21,.002,.09),BLACK)
-        label(b,n,'CORSAIR',(0,-.185,.022),.018,WHITE)
+        label(b,n,p.get('brand','CORSAIR'),(0,-.185,.022),.018,WHITE)
         label(b,n,p.get('model','CX650' if key=='cx650' else 'CX550'),(0,-.185,-.014),.027,WHITE)
         box('green CX stripe',(-.096,-.185,0),(.008,.002,.084),(.52,.67,.11,1))
         for i in range(12):box('PSU rear exhaust',(-.10+i*.018,.182,0),(.006,.002,.09),BLACK)
-        f=fan(b,n,(0,0,.063),.097,'CORSAIR');f.setP(-90)
+        f=fan(b,n,(0,0,.063),.097,p.get('brand','CORSAIR'));f.setP(-90)
     elif cat in ('Cooler','Fan'):
         if cat=='Cooler':
             if key=='pure_rock':
@@ -149,7 +149,7 @@ def _build_product(b,n,key):
                 pipe=b.cylinder(n,'copper heatpipe',(x,.06,-.058),(.012,.012,.10),(.58,.32,.13,1),'metal');pipe.setP(90)
             fan(b,n,(0,-.006,0),.068,p.get('brand','ARCTIC'))
         else:
-            box('120mm fan frame',(0,.008,0),(.17,.025,.17),DARK);fan(b,n,(0,-.008,0),.075,'ARCTIC')
+            box('120mm fan frame',(0,.008,0),(.17,.025,.17),DARK);fan(b,n,(0,-.008,0),.075,p.get('brand','ARCTIC'))
     elif cat=='Case':
         shell,panel=case(b,n,key);panel.show();n.setZ(-.34)
 
@@ -182,7 +182,7 @@ def case(b,parent,key):
                 for col in range(9):
                     x=-.19+col*.046;z=-.265+row*.038
                     line=b.box(front,'triangular airflow grille',(x,-.035,z),(.045,.004,.003),(.30,.31,.32,1));line.setR(37 if (row+col)%2 else -37)
-            label(b,front,'CORSAIR',(0,-.04,-.272),.021,WHITE)
+            label(b,front,PARTS[key].get('brand','CORSAIR'),(0,-.04,-.272),.021,WHITE)
     # USB/audio and real circular power button on top, restrained indicator.
     for y in (-.10,-.04):b.box(n,'USB IO',(.19,y,.683),(.025,.013,.003),BLACK)
     b.cylinder(n,'power button',(.19,.045,.683),(.024,.024,.003),SILVER)

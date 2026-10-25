@@ -62,3 +62,17 @@ The two board configurations assume suitable firmware for the paired processor.
 - AMD Ryzen 7 5700X: https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-7-5700x.html
 
 Catalog prices are fictional training values. Product meshes use a common service scale and simplify exact PCB layouts, dimensions and cooler construction.
+
+
+## Expanded catalog references, checked 24 October 2026
+
+Prices and stock are fictional training values. New products use original
+illustrations and simplified category meshes, not manufacturer models. Primary
+references checked for representative added product families:
+
+- G.SKILL Ripjaws V: https://www.gskill.com/specification/165/184/1535687484/F4-3200C16S-16GVK-Specification
+- TEAMGROUP VULCAN Z: https://www.teamgroupinc.com/en/product-detail/memory/T-FORCE/vulcan-z-ddr4-red/vulcan-z-ddr4-red-TLZRD48G3000HC16C01/
+- MSI B550M PRO-VDH: https://www.msi.com/Motherboard/B550M-PRO-VDH
+- ASRock B550M Pro4: https://www.asrock.com/mb/AMD/B550M%20Pro4/
+- Noctua NH-U12S redux and included fan: https://www.noctua.at/en/products/nh-u12s-redux/specifications
+- TEAMGROUP SATA SSD families: https://www.teamgroupinc.com/en/product-category/ssd/internal/

@@ -22,7 +22,7 @@ def install_checks(app,output):
         os.replace(temporary,target)
     def flow():
         app.open_mode('photo');app.ui.toast_node.hide()
-        check(app.graphics.quad is not None,'Postprocessing render target available')
+        check(app.graphics.quad is None,'Direct rendering is the default')
         check(len(app.builder.textures)>=15,'All original material textures loaded')
         check(app.sun.isShadowCaster(),'Sun shadow map enabled')
         aim((-1,-6.4,1.6),(-3,-1,1.35));yield from wait(12);capture('graphics_reception.png')
@@ -46,9 +46,9 @@ def install_checks(app,output):
         aim((-2.4,-7,1.45),(-2.4,-4.7,1.20))
         for p in people:p.update(.01)
         yield from wait();capture('graphics_residents.png')
-        # Film finish must be optional and leave the normal scene functioning.
+        # The optional contrast finish must leave the normal scene functioning.
         app.graphics.toggle_film();app.ui.toast_node.hide();yield from wait()
-        check(not app.graphics.film,'F6 disables film grain and grading');capture('graphics_clean.png')
+        check(app.graphics.film and app.graphics.quad is not None,'F6 enables the optional contrast pass');capture('graphics_clean.png')
         app.graphics.toggle_film();app.graphics.toggle_shadows();app.ui.toast_node.hide();yield from wait(12)
         check(not app.sun.isShadowCaster(),'F7 disables sun shadows');capture('graphics_low_cost.png')
         app.graphics.toggle_shadows();app.ui.toast_node.hide();yield from wait(12)

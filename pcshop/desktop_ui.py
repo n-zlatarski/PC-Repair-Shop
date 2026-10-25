@@ -20,8 +20,10 @@ class DesktopUI(WindowsShell):
     def browser_header(self,address='about:start'):
         self.rect(self.modal,0,0,1280,84,(.88,.92,.97,1))
         self.label(self.modal,'Web Browser',25,27,17,INK)
+        self.win_button('browser_back','<',15,40,55,lambda:self.app.browser_step(-1),h=32)
+        self.win_button('browser_forward','>',80,40,55,lambda:self.app.browser_step(1),h=32)
         self.label(self.modal,'Local training web / parts and hardware guides',240,26,13,INK)
-        entry=DirectEntry(parent=self.modal,initialText=address,scale=16,pos=(33,0,-63),width=59,numLines=1,
+        entry=DirectEntry(parent=self.modal,initialText=address,scale=16,pos=(162,0,-63),width=50,numLines=1,
                           frameColor=(.82,.88,.87,1),text_fg=(.07,.12,.15,1),command=self.app.navigate_browser,focus=0)
         self.layer(entry,self.modal);self.widgets.append(entry);self.browser_address=entry
         b=self.button('navigate','GO',1010,38,90,lambda:self.app.navigate_browser(entry.get()));b['frameSize']=(0,90,-34,0)

@@ -1,4 +1,5 @@
 """Rendered visual audit plus carried-case contact and street-activity checks."""
+import os
 from panda3d.core import Vec3,Filename
 from pcshop.world import Resident
 from pcshop.avatars import animate_resident
@@ -14,7 +15,10 @@ def install_checks(app,output):
         app.player=Vec3(*pos);app.camera.setPos(*pos);app.camera.lookAt(*target);app.heading=app.camera.getH();app.pitch=app.camera.getP()
     def capture(name):
         app.ui.toast_node.hide();app.graphicsEngine.renderFrame();app.graphicsEngine.renderFrame()
-        app.win.saveScreenshot(Filename.fromOsSpecific(str(output/(name+'.jpg'))))
+        path=output/(name+'.jpg');temp=output/('pending_'+name+'.jpg')
+        if not app.win.saveScreenshot(Filename.fromOsSpecific(str(temp))):raise RuntimeError('Capture failed: '+name)
+        with temp.open('rb') as saved:os.fsync(saved.fileno())
+        os.replace(temp,path)
     def flow():
         app.close_mode();app.open_mode('photo')
         for name,pos,target in [('street_facades',(-2,-12,1.75),(-2,-25,4.2)),('terraces',(-16,-17,1.8),(-13,-25,3.8)),('district', (28,-34,17),(-2,-7,1)),('pocket_square',(7,-6,1.7),(15,2,1)),('daylight_shop',(-2,-6,1.6),(-2,2,1.3))]:

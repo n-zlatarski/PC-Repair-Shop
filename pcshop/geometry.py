@@ -34,28 +34,26 @@ def cube_mesh():
     return mesh('box',faces)
 
 def bevel_mesh():
-    data=GeomVertexData('soft edged box',GeomVertexFormat.getV3n3t2(),Geom.UHStatic)
-    v,n,uv=(GeomVertexWriter(data,k) for k in ('vertex','normal','texcoord'))
-    tris=GeomTriangles(Geom.UHStatic);idx=0;r=.045
-    values=[-.5,-.5+r,.5-r,.5]
+    # 44 triangles per chamfered box instead of 108 subdivided triangles.
+    import itertools
+    faces=[];inner=.46
+    for axis in range(3):
+        others=[i for i in range(3) if i!=axis]
+        for sign in (-1,1):
+            face=[]
+            for u,v in ((-1,-1),(1,-1),(1,1),(-1,1)):
+                p=[0,0,0];p[axis]=sign*.5;p[others[0]]=u*inner;p[others[1]]=v*inner;face.append(p)
+            faces.append(face)
     for axis in range(3):
         a,b=[i for i in range(3) if i!=axis]
-        for sign in (-1,1):
-            points=[]
-            for row in values:
-                for col in values:
-                    point=Vec3();point[axis]=sign*.5;point[a]=col;point[b]=row
-                    inner=Vec3(*(max(-.5+r,min(.5-r,q)) for q in point))
-                    normal=point-inner;normal.normalize();point=inner+normal*r
-                    points.append(point);v.addData3(point);n.addData3(normal);uv.addData2(col+.5,row+.5)
-            for j in range(3):
-                for k in range(3):
-                    q=j*4+k;order=[q,q+1,q+5,q+4]
-                    cross=(points[order[1]]-points[order[0]]).cross(points[order[2]]-points[order[0]])
-                    if cross[axis]*sign<0:order.reverse()
-                    tris.addVertices(*(idx+z for z in order[:3]));tris.addVertices(idx+order[0],idx+order[2],idx+order[3])
-            idx+=16
-    geom=Geom(data);geom.addPrimitive(tris);node=GeomNode('soft edged box');node.addGeom(geom);return node
+        for sa,sb in itertools.product((-1,1),repeat=2):
+            face=[]
+            for end,swap in ((-1,False),(1,False),(1,True),(-1,True)):
+                p=[0,0,0];p[axis]=end*inner;p[a]=sa*(inner if swap else .5);p[b]=sb*(.5 if swap else inner);face.append(p)
+            faces.append(face)
+    for signs in itertools.product((-1,1),repeat=3):
+        faces.append([[signs[j]*(.5 if j==axis else inner) for j in range(3)] for axis in range(3)])
+    return mesh('chamfered box',faces)
 
 class Builder:
     def __init__(self,app):
@@ -73,8 +71,10 @@ class Builder:
         self.textures['floor']=self.textures['tile']
 
     def box(self,parent,name,pos,size,color,texture=None,unlit=False):
-        node=parent.attachNewNode((self.bevel if min(size)>.018 and max(size)<5 else self.cube).makeCopy()); node.setName(name)
+        node=parent.attachNewNode((self.bevel if min(size)>.055 and max(size)<3 else self.cube).makeCopy()); node.setName(name)
         node.setPos(*pos); node.setScale(*size); node.setColor(*color)
+        plain=any(word in name.lower() for word in ('marking','road dash','crosswalk','driveway edge'))
+        if plain:texture=None;unlit=True
         if not texture and not unlit:
             low=name.lower()
             texture=('wood' if any(k in low for k in ('tabletop','shipping','trunk')) else
@@ -85,6 +85,11 @@ class Builder:
                      'window' if 'window' in low or 'windscreen' in low else 'metal')
         if texture:self.surface(node,texture,size)
         if unlit: node.setLightOff(1)
+        # Ground receives building shadows but cannot usefully cast them.
+        # Excluding these thin slabs also prevents their back faces from
+        # creating striped self-shadowing across the road.
+        if any(word in name.lower() for word in ('road','pavement','paving','ground','driveway','marking','cross street','cross pavement')):
+            node.hide(BitMask32.bit(3))
         return node
 
     def text(self,parent,text,pos,size=.1,color=(.9,.95,.94,1),h=0,align=TextNode.ALeft):
@@ -132,6 +137,9 @@ class Builder:
             axes=sorted((abs(x) for x in size),reverse=True)
             scale=1.3 if key in ('wood','brick','tile','ceiling') else 2
             node.setTexScale(TextureStage.getDefault(),max(.2,axes[0]*scale),max(.2,axes[1]*scale))
+            # Bake UV tiling so differently sized meshes can share render states.
+            from panda3d.core import SceneGraphReducer
+            SceneGraphReducer().applyAttribs(node.node(),SceneGraphReducer.TTTexMatrix)
 
     def profile(self,parent,name,rings,color,texture=None,segments=20):
         """Smooth elliptical rings: z, x radius, y radius, optional centre offsets."""
@@ -154,21 +162,23 @@ class Builder:
         return node
 
     def ellipsoid(self,parent,name,pos,size,color,texture=None):
-        if not hasattr(self,'sphere'):
-            holder=self.app.render.attachNewNode('sphere template')
-            rings=[]
-            for i in range(17):
-                a=-math.pi/2+i*math.pi/16;r=max(.0001,math.cos(a)*.5)
+        detail=2 if max(size)>.6 else 1 if max(size)>.10 else 0
+        if not hasattr(self,'spheres'):self.spheres={}
+        if detail not in self.spheres:
+            holder=self.app.render.attachNewNode('sphere template');rings=[]
+            lat,lon=((6,10),(8,14),(12,20))[detail]
+            for i in range(lat+1):
+                a=-math.pi/2+i*math.pi/lat;r=max(.0001,math.cos(a)*.5)
                 rings.append((math.sin(a)*.5,r,r))
-            temp=self.profile(holder,'smooth sphere',rings,(1,1,1,1),segments=24)
-            self.sphere=temp.node().makeCopy();holder.removeNode()
-        node=parent.attachNewNode(self.sphere.makeCopy());node.setName(name)
+            temp=self.profile(holder,'smooth sphere',rings,(1,1,1,1),segments=lon)
+            self.spheres[detail]=temp.node().makeCopy();holder.removeNode()
+        node=parent.attachNewNode(self.spheres[detail].makeCopy());node.setName(name)
         node.setPos(*pos);node.setScale(*size);node.setColor(*color)
         if texture:self.surface(node,texture,size)
         return node
 
     def cylinder(self,parent,name,pos,size,color,texture=None):
-        node=self.profile(parent,name,[(-.5,.001,.001),(-.5,.5,.5),(.5,.5,.5),(.5,.001,.001)],color,texture,segments=20)
+        node=self.profile(parent,name,[(-.5,.001,.001),(-.5,.5,.5),(.5,.5,.5),(.5,.001,.001)],color,texture,segments=12)
         node.setPos(*pos);node.setScale(*size);return node
 
     def shadow(self,parent,pos,size=(.6,.4),strength=1):

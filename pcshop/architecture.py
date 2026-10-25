@@ -92,13 +92,35 @@ def building(app,parent,x,y,w,d,h,index,heading=0):
     else:
         box('roof cornice',(0,0,h+.10),(w+.23,d+.23,.22),trim)
         for px in (-w/2,w/2):box('roof parapet',(px,0,h+.34),(.15,d,.45),colors[style])
-    # Side elevations, downpipes and rooftop apparatus break up blank masses.
+    # Detail every visible elevation, including the once-blank rear walls.
     for side in (-1,1):
         box('rainwater pipe',(side*(w/2+.04),front+.18,h/2),(.065,.065,h),metal)
-        for z in range(2,int(h),3):
-            for yy in (-d*.24,d*.24):
-                box('side window',(side*(w/2+.01),yy,z),(.035,1.05,1.25),(.24,.34,.37,1))
-                box('side sill',(side*(w/2+.07),yy,z-.66),(.15,1.20,.08),trim)
+        box('rear drainpipe',(side*(w/2-.14),d/2+.07,h/2),(.065,.065,h),metal)
+        count=3 if d>7 else 2
+        for floor in range(floors):
+            z=1.55+floor*2.75
+            for c in range(count):
+                yy=(c-(count-1)/2)*d/(count+1)
+                win=window(0,z,min(1.25,d/(count+1)*.64),1.30,seed=floor*7+c+side)
+                win.setPos(side*(w/2+.04),yy,z);win.setH(side*90)
+    for c in range(columns):
+        px=(c-(columns-1)/2)*w/(columns+1)
+        for floor in range(floors):
+            z=1.55+floor*2.75
+            win=window(0,z,min(1.35,w/(columns+1)*.65),1.35,seed=floor*9+c)
+            win.setPos(px,d/2+.04,z);win.setH(180)
+    for floor in range(1,floors):
+        box('rear storey band',(0,d/2+.045,.45+floor*2.75),(w+.08,.13,.12),trim)
+        for side in (-1,1):box('side storey band',(side*(w/2+.045),0,.45+floor*2.75),(.13,d+.08,.12),trim)
+    for side in (-1,1):
+        for yy in (-d/2,d/2):box('corner masonry',(side*(w/2-.08),yy,h/2),(.18,.15,h),trim)
+    if style==0:
+        for side in (-1,1):
+            face=[(side*w/2,-d/2,h),(side*w/2,d/2,h),(side*w/2,0,h+1.35)]
+            node=g.attachNewNode(mesh('closed masonry roof gable',[face]));node.setColor(*colors[style]);b.surface(node,'plaster');node.setTwoSided(True)
+    if style==4:
+        box('clerestory rear frame',(0,d*.35+.03,h+.35),(w*.91,.07,.74),metal)
+        for xx in range(max(2,int(w))):box('clerestory mullion',(-w*.43+xx*w*.86/max(1,int(w)-1),-d*.35-.01,h+.35),(.045,.04,.70),trim)
     if style not in (0,4):
         box('rooftop air unit',(w*.24,d*.15,h+.35),(.95,.65,.55),(.42,.45,.44,1))
         for z in range(5):box('air unit vent',(w*.24,d*.15-.34,h+.15+z*.09),(.8,.02,.025),dark)

@@ -16,7 +16,7 @@ def install_checks(app,output):
     def capture(name):
         app.ui.toast_node.hide();app.graphicsEngine.renderFrame();app.graphicsEngine.renderFrame()
         file=output/(name+'.jpg');check(app.win.saveScreenshot(Filename.fromOsSpecific(str(file))),'Screenshot '+name)
-    def pointer(x,y):app.win.movePointer(0,int(x*app.win.getXSize()/1280),int(y*app.win.getYSize()/800))
+    def pointer(x,y):app.win.movePointer(0,*map(round,app.ui.design_to_pixels(x,y)))
     def down():app.win.getInputDevice(0).buttonDown(MouseButton.one(),app.clock.getFrameTime())
     def up():app.win.getInputDevice(0).buttonUp(MouseButton.one(),app.clock.getFrameTime())
     def click(key):
@@ -26,7 +26,7 @@ def install_checks(app,output):
     def point(pos):
         screen=Point2();world=app.render.getRelativePoint(app.pc.root,Point3(*pos))
         check(app.camLens.project(app.camera.getRelativePoint(app.render,world),screen),'Target in view')
-        pointer((screen.x+1)*640,(1-screen.y)*400)
+        pointer(*app.ui.mouse_to_design(screen.x,screen.y))
     def tool(key,target,flag=None):
         yield from click('tool_'+key);point(TARGETS[target]);yield from wait(4)
         check(app.service.hit()=='tool:'+target,'Ray reaches '+target)

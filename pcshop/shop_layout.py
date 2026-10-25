@@ -37,14 +37,15 @@ class Workshop:
         self.replaced_meshes=0
         for item in self.data['meshes']:
             name=item['name'];leaf=name.rsplit('/',1)[-1]
-            removed=name in {'Architecture/Finishes/ReceptionWallSign','Architecture/Finishes/WorkshopWayfinding','Reception/ReceptionCounter/CounterSignBase','Reception/ReceptionCounter/CounterSign','Reception/ReceptionCounter/CounterPlaque'}
+            removed=name in {'Architecture/Finishes/BackDoorSign','Architecture/Finishes/ReceptionWallSign','Architecture/Finishes/WorkshopWayfinding','Reception/ReceptionCounter/CounterSignBase','Reception/ReceptionCounter/CounterSign','Reception/ReceptionCounter/CounterPlaque'}
             old_tool=name.startswith('Workshop/ToolBoard/') and not leaf.startswith(('Board','TopFrame','BottomFrame','SideFrame','Peg_'))
             if removed or old_tool:self.replaced_meshes+=1;continue
             screen='/Computer/' in name and (leaf in ('Screen','Header','Sidebar') or leaf.startswith(('Menu','Text','Status')))
-            shelf=name.startswith('Storage/PartsShelf_') and not leaf.startswith(('Upright','Foot','Shelf','FrontLip','Header','BackBrace'))
+            shelf=name.startswith('Storage/PartsShelf_')
             if screen or shelf:self.replaced_meshes+=1;continue
             self.add_mesh(item)
         for label in self.data['labels']:
+            if label['name'].startswith('Storage/PartsShelf_') or label['text']=='REAR ACCESS':continue
             if '/Computer/' in label['name'] or label['name'].startswith('Workshop/ToolBoard/'):continue
             if label['text'] in ('PC / REPAIR','DIAGNOSE  /  REPAIR  /  RESTORE','WORKSHOP','CHECK IN'):continue
             if label['name'].startswith('Storage/') and label['text'] in ('PSU','GPU','RAM','SSD','KIT',''):continue
@@ -57,6 +58,7 @@ class Workshop:
             self.app.builder.text(self.static, label['text'], pos, label['size'],
                                   label['color'], h=heading, align=TextNode.ACenter)
         for item in self.data['colliders']:
+            if item.get('name','').startswith('Storage/PartsShelf_') or item.get('name')=='Architecture/Finishes/BackDoorSign':continue
             lo = [min(p[i] for p in item['points']) for i in range(3)]
             hi = [max(p[i] for p in item['points']) for i in range(3)]
             if abs(hi[2]) < .005:
@@ -116,13 +118,14 @@ class Workshop:
 
     def material_for(self,item):
         name=item['name'].lower();c=list(item['color'])
-        if item['emission'] or c[3]<.99:return None,c
-        if name=='architecture/floor':return 'tile',(.59,.58,.53,1)
-        if name=='architecture/ceiling':return 'ceiling',(.83,.81,.75,1)
+        if c[3]<.99:return None,(.70,.84,.88,min(c[3],.075))
+        if item['emission']:return None,c
+        if name=='architecture/floor':return 'tile',(.64,.67,.69,1)
+        if name=='architecture/ceiling':return 'ceiling',(.90,.91,.92,1)
         if name.startswith('architecture/') and ('wall' in name or 'archsegment' in name or 'archjamb' in name) and 'sign' not in name:
-            return 'plaster',(.76,.73,.65,1) if 'interiorwall' not in name else (.64,.67,.63,1)
+            return 'plaster',(.84,.85,.84,1) if 'interiorwall' not in name else (.54,.63,.65,1)
         if any(k in name for k in ('landing',)):return 'concrete',(.56,.55,.51,1)
-        if any(k in name for k in ('reception_top','woodpanel','paneljoint','sidetop')):return 'wood',(.66,.51,.35,1)
+        if any(k in name for k in ('reception_top','woodpanel','paneljoint','sidetop')):return 'wood',(.64,.49,.32,1)
         if 'mat' in name:return 'rubber',(.16,.33,.35,1)
         if c[2]>c[0]*2 and c[1]>.2:c=[.16,.34,.39,c[3]]
         return 'metal',c

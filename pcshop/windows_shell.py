@@ -5,7 +5,7 @@ from direct.gui.DirectGui import DirectFrame,DirectButton,DirectEntry,DGG
 from .geometry import ASSETS
 
 INK=(.10,.13,.19,1);BLUE=(.04,.36,.79,1);WHITE=(.97,.98,1,1)
-APP_NAMES={'desktop':'Desktop','browser':'Web Browser','shop':'Partline - PC parts','checkout':'Partline - Checkout','guide':'Hardware Guide','network':'Network settings','security':'Camera Viewer','diagnostic':'Hardware Lab','inventory':'Workshop Stock','files':'File Explorer','settings':'Settings','report':'Diagnostic report'}
+APP_NAMES={'product_page':'Partline - Product','receipt':'Partline - Orders','desktop':'Desktop','browser':'Web Browser','shop':'Partline - PC parts','checkout':'Partline - Checkout','guide':'Hardware Guide','network':'Network settings','security':'Camera Viewer','diagnostic':'Hardware Lab','inventory':'Workshop Stock','files':'File Explorer','settings':'Settings','report':'Diagnostic report'}
 class WindowsShell:
     def tex(self,name):
         cache=getattr(self.app,'shell_textures',None)

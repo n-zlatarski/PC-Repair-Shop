@@ -21,7 +21,7 @@ class Neighborhood:
         app.workshop.support.extend([(-22,18,-25,-7.5),(-22,-9.5,-7.5,16),(5.5,18,-7.5,16),(-9.5,5.5,7.5,16)])
         box('neighborhood ground',(-2,-4,-.13),(40,42,.24),(.43,.49,.41,1))
         box('road',(-2,-16,-.006),(40,7,.02),(.14,.19,.22,1))
-        for y in (-11,-21):box('pavement',(-2,y,-.008),(40,3,.025),(.63,.66,.61,1))
+        for y in (-11,-21):box('pavement',(-1.75,y,-.008),(39.5,3,.025),(.63,.66,.61,1))
         for x in range(-20,18,5):box('road dash',(x,-16,.011),(2.0,.11,.008),(.9,.84,.56,1))
         from .architecture import building
         for i,x in enumerate((-18,-12,-6,0,6,12)):
@@ -42,7 +42,10 @@ class Neighborhood:
             box('lamp',(x,-11.6,3.8),(.38,.5,.16),(.79,.77,.66,1))
             b(s,'lamp diffuser',(x,-11.6,3.71),(.30,.4,.025),(.97,.87,.62,1),unlit=True)
         # Courtyard stays clear behind the existing rear exit.
-        box('rear service pad',(-2,11,-.006),(8,5,.025),(.50,.54,.53,1))
+        box('rear service pad',(-2,8.5,-.006),(8,2,.025),(.50,.54,.53,1))
+        box('rear delivery driveway',(-2,14.5,-.006),(5.2,10,.025),(.38,.40,.39,1))
+        for x in (-4.55,.55):box('driveway edge',(x,14.5,.02),(.055,10,.015),(.62,.61,.50,1))
+        for x in (-4.5,.5):box('loading stop',(x,10.3,.10),(.65,.17,.20),(.41,.43,.40,1))
 
 
         box('roof edge',(-2,0,3.03),(15.3,15.3,.15),(.19,.28,.30,1))
@@ -58,6 +61,7 @@ class Neighborhood:
         # Architecture is already batched per building; retain those culling groups.
         from .city import expand_city
         expand_city(app)
+        self.root.flattenStrong()
         self.sync()
     def sync(self):
         j=self.app.job;ready_ids={r['id'] for r in j.ready}
@@ -100,7 +104,13 @@ class Resident:
         to_player=self.app.player-self.root.getPos();to_player.z=0
         if to_player.length()<.65 and d.normalized().dot(to_player)>.1:
             animate_resident(self,False,dt);return
-        step=min(distance,dt*(.94 if not self.parcel.isHidden() else 1.10+(self.index%4)*.06));self.root.setPos(self.root.getPos()+d.normalized()*step)
+        step=min(distance,dt*(.94 if not self.parcel.isHidden() else 1.10+(self.index%4)*.06))
+        current=self.root.getPos();next_pos=current+d.normalized()*step
+        for left,right,bottom,top in getattr(self.app.workshop,'dynamic_obstacles',[]):
+            inside=left-.30<current.x<right+.30 and bottom-.30<current.y<top+.30
+            entering=left-.35<next_pos.x<right+.35 and bottom-.35<next_pos.y<top+.35
+            if entering and not inside:animate_resident(self,False,dt);return
+        self.root.setPos(next_pos)
         self.face(d,dt)
         animate_resident(self,True,dt)
 

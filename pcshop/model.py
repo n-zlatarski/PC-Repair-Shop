@@ -14,6 +14,9 @@ class RepairJob:
     stage:str='offered'
     installed:str|None='original'
     inventory:list[str]=field(default_factory=list)
+    held_part:str|None=None
+    orders:list=field(default_factory=list)
+    stored_parts:list[str]=field(default_factory=lambda:['replacement','upgrade','lpx8','lpx16','crucial8','crucial16','gtx1650','rx6600','rtx3060','a400','evo870','mx500'])
     connected:bool=False
     panel_open:bool=False
     diagnosed:bool=False
@@ -36,6 +39,7 @@ class RepairJob:
     diagnostic_report:list=field(default_factory=list)
     desktops:dict=field(default_factory=lambda:{'reception':'desktop','diagnostic':'desktop'})
 
+    desktop_products:dict=field(default_factory=lambda:{'reception':'replacement','diagnostic':'replacement'})
     desktop_preferences:dict=field(default_factory=lambda:{'reception':'blue','diagnostic':'blue'})
     maintenance:dict=field(default_factory=lambda:maintenance_defaults())
 
@@ -55,6 +59,7 @@ class RepairJob:
         self.require(self.stage=='offered','This request is already accepted.')
         self.stage='accepted';self.history.append(f'Accepted ticket {self.number}: {self.kind}.')
     def pickup(self):
+        self.require(self.held_part is None,'Set down the component before carrying a PC.')
         self.require(self.stage in ('accepted','complete'),'Accept the request first.')
         self.stage='ready_carry' if self.stage=='complete' else 'carrying'
     def place(self):
@@ -196,6 +201,7 @@ class RepairJob:
             self.require(key in self.stock and type(qty) is int and 0<qty<=self.stock[key],'Requested stock is unavailable.')
             total+=PARTS[key]['price']*qty
         self.require(total<=self.money,'Insufficient workshop funds.')
+        self.orders.append({'id':len(self.orders)+1,'items':dict(cart),'paid':total})
         self.money-=total
         for key,qty in cart.items():self.stock[key]-=qty
         self.pending.append({'items':dict(cart),'remaining':4.0,'paid':total,'status':'queued'})
@@ -209,6 +215,31 @@ class RepairJob:
             self.pending.remove(order)
         self.courier.update(phase='handover',elapsed=0.)
         return len(delivered)
+    def take_stored(self,index):
+        self.require(type(index) is int and 0<=index<len(self.stored_parts),'This shelf space is empty.')
+        self.require(self.held_part is None,'Your hands are full. Set the component on the workbench or return it to a shelf.')
+        self.require(self.stage not in ('carrying','ready_carry'),'Put the customer PC down first.')
+        key=self.stored_parts.pop(index);self.held_part=key
+        return key
+    def place_held(self,on_shelf=False):
+        self.require(self.held_part is not None,'You are not holding a component.')
+        if on_shelf:self.require(len(self.stored_parts)<60,'All 60 shelf spaces are occupied.')
+        key=self.held_part
+        (self.stored_parts if on_shelf else self.inventory).append(key)
+        self.held_part=None
+        return key
+    def store_part(self,key):
+        self.require(key in self.inventory,'This part is not in the repair tray.')
+        self.require(PARTS[key]['category'] in SERVICEABLE and not PARTS[key]['faulty'],'These racks hold usable RAM, graphics cards and SATA drives.')
+        self.require(len(self.stored_parts)<60,'All 60 shelf spaces are occupied.')
+        self.inventory.remove(key);self.stored_parts.append(key)
+    def store_usable_parts(self):
+        count=0
+        for key in list(self.inventory):
+            if len(self.stored_parts)>=60:break
+            if PARTS[key]['category'] in SERVICEABLE and not PARTS[key]['faulty']:
+                self.store_part(key);count+=1
+        return count
     def tick(self,dt,pause_courier=False):
         from .delivery_rules import advance
         advance(self,dt,pause_courier)
@@ -235,15 +266,18 @@ class RepairJob:
         # Add newly available products without resetting existing quantities/saves.
         for key,p in PARTS.items():
             if p['price']>0:j.stock.setdefault(key,8)
-        valid={'desktop','browser','shop','guide','network','security','diagnostic','checkout','inventory','files','settings','report','lock'}
+        valid={'desktop','browser','shop','guide','network','security','diagnostic','checkout','inventory','files','settings','report','lock','product_page','receipt'}
         j.desktops={k:(j.desktops.get(k,'desktop') if j.desktops.get(k,'desktop') in valid else 'desktop') for k in ('reception','diagnostic')}
+        j.desktop_products={k:j.desktop_products.get(k,'replacement') if j.desktop_products.get(k) in PARTS else 'replacement' for k in ('reception','diagnostic')}
         j.desktop_preferences={k:j.desktop_preferences.get(k,'blue') if j.desktop_preferences.get(k,'blue') in ('blue','dusk') else 'blue' for k in ('reception','diagnostic')}
         j.maintenance={**maintenance_defaults(),**j.maintenance}
         if j.kind not in REQUESTS:raise ValueError('Unknown request')
         if j.stage not in ('offered','accepted','carrying','bench','complete','ready_carry'):raise ValueError('Invalid stage')
         if type(j.money) is not int or j.money<0:raise ValueError('Invalid money')
         if j.installed is not None and j.installed not in PARTS:raise ValueError('Unknown part')
+        if j.held_part is not None and (j.held_part not in PARTS or PARTS[j.held_part]['faulty'] or PARTS[j.held_part]['category'] not in SERVICEABLE):raise ValueError('Invalid held part')
         if any(k not in PARTS for k in j.inventory):raise ValueError('Unknown inventory')
+        if not isinstance(j.stored_parts,list) or len(j.stored_parts)>60 or any(k not in PARTS or PARTS[k]['category'] not in SERVICEABLE or PARTS[k]['faulty'] for k in j.stored_parts):raise ValueError('Invalid shelf stock')
         if len(j.ready)>3 or len({r['slot'] for r in j.ready})!=len(j.ready):raise ValueError('Invalid table slots')
         if set(j.hardware)!=set(DEFAULT_HARDWARE) or any(v is not None and v not in PARTS for v in j.hardware.values()):raise ValueError('Unknown hardware')
         return j

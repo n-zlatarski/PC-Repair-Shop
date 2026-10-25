@@ -9,16 +9,19 @@ from .product_view import ProductView
 from .desktop_ui import DesktopUI
 from .desktops import OS_MODES
 from .repair_tools import TOOLS
+from .store_ui import StoreUI
 
 class Interface(DesktopUI,BaseInterface):
     def show(self,mode):
         self._mode=mode;self.browser_address=None;self.start_search_entry=None
+        if hasattr(self,'desktop_backdrop'):
+            self.desktop_backdrop.show() if mode in OS_MODES and self.app.active_terminal else self.desktop_backdrop.hide()
         if getattr(self,'product_view',None):self.product_view.close();self.product_view=None
         self.clear();self.hud.hide() if mode else self.hud.show()
         self.repair_hint=None;self.search_entry=None
         method={'welcome':self.welcome,'ticket':self.ticket,'repair':self.repair,'diagnostic':self.diagnostic,
                 'pause':self.pause,'complete':self.completion,'reset':self.reset_confirm,'shop':self.shop,
-                'checkout':self.checkout,'inventory':self.inventory,'product':self.product,'delivery':self.delivery,
+                'checkout':self.checkout,'product_page':self.product_page,'receipt':self.receipt,'inventory':self.inventory,'product':self.product,'delivery':self.delivery,
                 'desktop':self.desktop,'browser':self.browser,'guide':self.guide,'network':self.network,'security':self.security,'files':self.files,'settings':self.settings,'report':self.report,'lock':self.lock}.get(mode)
         if method:method()
         if mode in OS_MODES and self.os_active():
@@ -175,62 +178,24 @@ class Interface(DesktopUI,BaseInterface):
         self.button('next_package','NEXT PRODUCT',80,720,230,a.next_package,len(items)>1)
         self.button('turn_package','ROTATE',330,720,160,lambda:self.product_view.turn(30))
         self.button('unpack','COLLECT PACKAGE',890,650,320,a.unpack_delivery,True,True)
-    def shop(self):
-        a=self.app;j=a.job
-        self.rect(self.modal,0,0,1280,800,(.035,.07,.09,1));self.header('PARTLINE / ONLINE PARTS','Training catalog  /  real product names  /  simulated prices and deliveries')
-        self.rect(self.modal,15,100,215,715,PANEL)
-        for i,cat in enumerate(CATEGORIES):self.button('category_'+cat,cat,28,115+i*54,174,lambda c=cat:a.filter_shop(c),True,a.shop_category==cat)
-        self.label(self.modal,'SEARCH',240,121,12,MUTED,mono=True)
-        entry=DirectEntry(parent=self.modal,initialText=a.shop_search,scale=17,pos=(320,0,-123),width=22,numLines=1,
-                          frameColor=(.88,.91,.88,1),text_fg=(.1,.15,.18,1),command=a.search_shop,focus=0)
-        self.layer(entry,self.modal);self.widgets.append(entry);self.search_entry=entry
-        self.button('search','FIND',730,94,110,lambda:a.search_shop(entry.get()))
-        self.button('sort','PRICE '+('HIGH' if a.shop_desc else 'LOW'),855,94,150,a.sort_shop)
-        self.button('stock','MY STOCK',1020,94,230,lambda:a.open_mode('inventory'))
-        keys=[k for k,p in PARTS.items() if k in j.stock and (a.shop_category=='All' or p['category']==a.shop_category) and a.shop_search.lower() in (p['name']+' '+p['spec']).lower()]
-        keys.sort(key=lambda k:PARTS[k]['price'],reverse=a.shop_desc)
-        pages=max(1,(len(keys)+5)//6);a.shop_page=min(a.shop_page,pages-1)
-        for i,key in enumerate(keys[a.shop_page*6:a.shop_page*6+6]):
-            p=PARTS[key];x=235+(i%3)*337;y=160+(i//3)*267
-            self.rect(self.modal,x,y,x+320,y+252,(.88,.91,.88,1))
-            self.card_icon(key,x+22,y+15)
-            self.label(self.modal,p['name'],x+20,y+96,18,DARK,width=283)
-            self.label(self.modal,p['spec'],x+20,y+147,13,DARK,width=283)
-            fit='Fits this board' if key!='incompatible' else 'INCOMPATIBLE: DDR5'
-            if p['category'] not in SERVICEABLE:fit='Stock only / fitting not enabled'
-            self.label(self.modal,fit,x+20,y+173,12,(.1,.38,.34,1) if key!='incompatible' else (.7,.19,.14,1))
-            qty=a.cart.get(key,0);self.label(self.modal,f"Stock {j.stock[key]}   Cart {qty}",x+20,y+195,12,DARK)
-            self.button('add_'+key,f"ADD  ${p['price']}",x+20,y+202,220,lambda k=key:a.cart_add(k),j.stock[key]>qty,True)
-            self.button('minus_'+key,'-',x+249,y+202,52,lambda k=key:a.cart_add(k,-1),qty>0)
-        if not keys:self.label(self.modal,'No products match your search.',260,250,23,LIGHT)
-        self.button('prev','<',240,718,65,lambda:a.page_shop(-1),a.shop_page>0)
-        self.label(self.modal,f'{a.shop_page+1} / {pages}',325,747,17,LIGHT)
-        self.button('next','>',405,718,65,lambda:a.page_shop(1),a.shop_page+1<pages)
-        total=sum(PARTS[k]['price']*v for k,v in a.cart.items())
-        self.label(self.modal,f'Funds ${j.money}   /   Cart ${total}',505,746,19,CYAN)
-        self.button('review','REVIEW ORDER',945,714,300,lambda:a.open_mode('checkout'),bool(a.cart),True)
-        pending=sum(p.get('status')=='waiting' for p in j.pending)
-        self.label(self.modal,__import__('pcshop.delivery_rules',fromlist=['status']).status(j),240,789,12,MUTED)
-    def checkout(self):
-        a=self.app;j=a.job;total=sum(PARTS[k]['price']*v for k,v in a.cart.items())
-        self.rect(self.modal,0,0,1280,800,BG);self.header('REVIEW ORDER','Meet the courier on the pavement outside the front entrance')
-        y=130
-        for key,qty in a.cart.items():
-            self.label(self.modal,f"{qty} x {PARTS[key]['name']}   /   ${qty*PARTS[key]['price']}",120,y,19,LIGHT);y+=30
-        self.label(self.modal,f'Total ${total}   /   Available ${j.money}',120,650,25,CYAN)
-        self.button('pay','PLACE ORDER',120,695,280,a.checkout,bool(a.cart) and total<=j.money,True)
-        self.button('back','BACK TO CATALOG',430,695,280,lambda:a.open_mode('shop'))
-        self.button('clear','EMPTY CART',740,695,280,a.clear_cart)
+    def shop(self):StoreUI.shop(self)
+    def checkout(self):StoreUI.checkout(self)
+    def product_page(self):StoreUI.product_page(self)
+    def receipt(self):StoreUI.receipt(self)
+    store_base=StoreUI.store_base
+    product_image=StoreUI.product_image
+    fit_text=StoreUI.fit_text
     def inventory(self):
         a=self.app;j=a.job
-        self.rect(self.modal,0,0,1280,800,BG);self.header('WORKSHOP STOCK','Delivered parts / removed customer components')
+        self.rect(self.modal,0,0,1280,800,BG);self.header('REPAIR TRAY',f'Shelves: {len(j.stored_parts)}/60 / Look at a shelf part and press E to take it')
         items=list(Counter(j.inventory).items());a.inventory_page=min(a.inventory_page,max(0,(len(items)-1)//8))
         for i,(key,qty) in enumerate(items[a.inventory_page*8:a.inventory_page*8+8]):
             p=PARTS[key];y=125+i*63
             self.label(self.modal,f"{qty} x {p['name']}",70,y+26,19,LIGHT)
-            self.button('inspect_'+key,'INSPECT',650,y,170,lambda k=key:a.inspect_product(k,'inventory'))
+            self.button('inspect_'+key,'INSPECT',620,y,135,lambda k=key:a.inspect_product(k,'inventory'))
+            self.button('store_'+key,'STORE',765,y,100,lambda k=key:a.store_stock(k),p['category'] in SERVICEABLE and not p['faulty'] and len(j.stored_parts)<60)
             self.button('return_'+key,f"RETURN / ${p['price']}",870,y,315,lambda k=key:a.return_stock(k),p['price']>0)
-        if not items:self.label(self.modal,'No delivered parts. Order from PARTLINE and collect the box outside.',70,180,23,MUTED,width=1100)
+        if not items:self.label(self.modal,'Take parts from the racks, or order from PARTLINE and collect the rear delivery.',70,180,23,MUTED,width=1100)
         self.button('stockprev','<',70,690,70,lambda:a.page_inventory(-1),a.inventory_page>0)
         self.button('stocknext','>',155,690,70,lambda:a.page_inventory(1),(a.inventory_page+1)*8<len(items))
         self.button('catalog','PARTS CATALOG',870,690,315,lambda:a.open_mode('shop'),True,True)

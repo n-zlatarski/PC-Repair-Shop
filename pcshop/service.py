@@ -148,7 +148,8 @@ class ServiceControls:
                     if (m-screen).length()<.25:a.job.close_panel()
                     else:a.ui.toast('Drop the side panel over the centre of the case.')
             elif drag['kind']=='remove':
-                if .53<m.x<.98 and -.65<m.y<.62:a.job.remove_part(drag['name'])
+                x,y=a.ui.mouse_to_design(m.x,m.y)
+                if 979<x<1267 and 152<y<660:a.job.remove_part(drag['name'])
                 else:a.ui.toast('Drop the part inside the parts tray on the right.')
             else:
                 center=a.render.getRelativePoint(a.pc.root,Point3(*CENTERS[drag['name']]))

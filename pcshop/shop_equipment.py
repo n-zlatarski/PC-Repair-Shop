@@ -1,7 +1,5 @@
 """Recognizable shelf contents, local network equipment and mounted CCTV cameras."""
-import math
 from panda3d.core import TextNode
-from .hardware_visuals import product,packaging
 CAMERAS=[
  ('Reception',(4.95,-6.85,2.55),(-3,-3.5,1.0)),
  ('Workshop',(4.95,6.7,2.55),(-6.8,2.8,1.0)),
@@ -12,47 +10,11 @@ CAMERAS=[
 class ShopEquipment:
     def __init__(self,app):
         self.app=app;self.b=app.builder;self.root=app.render.attachNewNode('shop equipment')
-        self.samples=[];self.cameras=[]
+        self.cameras=[]
         self.shelves();self.network();self.security()
-    def item(self,key,x,y,z,rotation=(0,0,0),scale=1,boxed=False):
-        n=(packaging if boxed else product)(self.b,self.root,key)
-        n.setPos(x,y,z);n.setHpr(*rotation);n.setScale(scale)
-        low,high=n.getTightBounds(self.root);n.setZ(n.getZ()+z-low.z)
-        low,high=n.getTightBounds(self.root)
-        self.app.interaction.box(self.root,'shelf_part:'+key,(low+high)*.5,tuple(max(.065,high[i]-low[i]) for i in range(3)))
-        self.samples.append((key,n))
-        return n
     def shelves(self):
-        b=self.b;g=self.root
-        # Retail stock faces the aisle, with one loose reference per category beside it.
-        for x,key in [(-.49,'cx550'),(.20,'cx650')]:self.item(key,x,7.00,.123,boxed=True)
-        self.item('cx550',.70,6.91,.123,scale=.63)
-        for x,key in [(-.39,'rx6600'),(.40,'gtx1650')]:self.item(key,x,7.02,.623,boxed=True)
-        for x,key in [(-.50,'replacement'),(-.03,'upgrade'),(.49,'incompatible')]:self.item(key,x,7.00,1.123,boxed=True)
-        for x,key in [(-.46,'a400'),(.13,'evo870')]:self.item(key,x,7.00,1.623,boxed=True)
-        self.item('evo870',.64,6.93,1.623,scale=1.10)
-        # Second rack: real coils with plugs, air coolers, boards and processors.
-        for i,color in enumerate(((.65,.07,.045,1),(.07,.085,.10,1),(.04,.32,.62,1))):
-            x=1.39+i*.58
-            b.box(g,'cable tray',(x,7.02,.143),(.49,.36,.04),(.14,.18,.18,1))
-            for layer in range(4):
-                ring=b.ring(g,(x,7.02,.178+layer*.012),.13,color,.008,40);ring.setP(90)
-            b.lines(g,'loose cable tail',[(x+.1,6.94,.20),(x+.18,6.87,.20),(x+.15,6.84,.18)],color,4)
-            b.box(g,'connector housing',(x+.15,6.83,.18),(.055,.042,.035),(.075,.08,.085,1))
-            for pin in range(4):b.box(g,'connector contact',(x+.13+pin*.013,6.807,.183),(.006,.003,.01),(.72,.55,.23,1))
-        for x,key in [(1.42,'p12'),(2.0,'freezer'),(2.56,'p12')]:
-            self.item(key,x,7.02,.623,boxed=True)
-        for x,key in [(1.48,'b560'),(2.48,'b550')]:
-            b.box(g,'motherboard cradle',(x,7.08,1.136),(.44,.30,.025),(.13,.16,.18,1))
-            self.item(key,x,7.06,1.15,boxed=True)
-        for x,key in [(1.45,'i5'),(2.43,'ryzen5600')]:
-            self.item(key,x-.13,7.05,1.623,boxed=True)
-            b.box(g,'processor protective tray',(x+.19,6.96,1.637),(.17,.16,.028),(.18,.20,.22,1))
-            self.item(key,x+.19,6.95,1.654,(0,-25,0),1.05)
-        for x in (0,2):
-            b.text(g,'RETAIL PACKS / E TO INSPECT',(x,6.742,1.94),.045,(.75,.83,.82,1),align=TextNode.ACenter)
-        # Static models are combined; each sample still has its own inspect target.
-        # Product templates are already batched. Keep sample nodes separate for picking.
+        from .parts_storage import PartsStorage
+        self.storage=PartsStorage(self.app)
     def network(self):
         b=self.b;g=self.root.attachNewNode('network shelf');g.setPos(3.65,7.14,2.03)
         b.box(g,'wall shelf',(0,0,-.045),(.68,.35,.05),(.19,.23,.24,1))

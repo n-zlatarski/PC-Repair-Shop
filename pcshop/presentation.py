@@ -1,24 +1,25 @@
 """Restrained photographic presentation: lit materials, shadowed daylight, film finish.
 The gameplay renderer and GUI remain separate; no blur or grain is applied to UI.
 """
-from panda3d.core import (AmbientLight,DirectionalLight,PointLight,Fog,Texture,Shader,Vec2,BitMask32)
+from panda3d.core import (AmbientLight,DirectionalLight,PointLight,Fog,Texture,Shader,Vec2,BitMask32,DepthOffsetAttrib)
 from direct.filter.FilterManager import FilterManager
 
 SHADOW=BitMask32.bit(3)
 
 def install_lighting(app):
     r=app.render;r.clearLight()
-    ambient=AmbientLight('cool room bounce');ambient.setColor((.39,.43,.46,1));r.setLight(r.attachNewNode(ambient))
-    sun=DirectionalLight('late afternoon sun');sun.setColor((.92,.85,.73,1))
-    sun.setShadowCaster(True,2048,2048);sun.setCameraMask(SHADOW)
-    sun.getLens().setFilmSize(57,57);sun.getLens().setNearFar(4,95)
+    ambient=AmbientLight('neutral room bounce');ambient.setColor((.64,.65,.67,1));r.setLight(r.attachNewNode(ambient))
+    sun=DirectionalLight('late afternoon sun');sun.setColor((.83,.80,.74,1))
+    sun.setShadowCaster(True,1024,1024);sun.setCameraMask(SHADOW)
+    sun.setInitialState(sun.getInitialState().addAttrib(DepthOffsetAttrib.make(-2),1))
+    sun.getLens().setFilmSize(40,40);sun.getLens().setNearFar(4,95)
     node=r.attachNewNode(sun);node.setPos(-24,-32,35);node.lookAt(-2,-3,0);r.setLight(node)
-    app.sun=sun
-    for i,pos in enumerate([(-6.7,-4.4,2.43),(1.8,-4.4,2.43),(-6.7,3.4,2.43),(1.8,3.4,2.43)]):
-        light=PointLight('warm fluorescent '+str(i));light.setColor((.90,.78,.59,1) if i<2 else (.76,.84,.86,1))
-        light.setAttenuation((1,.04,.055));np=r.attachNewNode(light);np.setPos(*pos);r.setLight(np)
-    fog=Fog('subtle distance haze');fog.setColor(.64,.71,.74);fog.setExpDensity(.0045);r.setFog(fog)
-    app.setBackgroundColor(.64,.71,.74);r.setShaderAuto()
+    app.sun=sun;app.sun_path=node
+    # One broad ceiling fill replaces four per-object point lights.
+    light=DirectionalLight('neutral ceiling bounce');light.setColor((.35,.34,.32,1))
+    ceiling=r.attachNewNode(light);ceiling.setHpr(0,-90,0);app.room_lights=[ceiling]
+    fog=Fog('subtle distance haze');fog.setColor(.70,.78,.84);fog.setExpDensity(.0025);r.setFog(fog)
+    app.setBackgroundColor(.70,.78,.84);r.setShaderAuto()
 
 VERTEX='''#version 130
 uniform mat4 p3d_ModelViewProjectionMatrix;
@@ -29,29 +30,11 @@ void main(){gl_Position=p3d_ModelViewProjectionMatrix*p3d_Vertex;uv=p3d_MultiTex
 '''
 FRAGMENT='''#version 130
 uniform sampler2D scene;
-uniform vec2 resolution;
-uniform float clock;
-uniform float film;
 in vec2 uv;
 out vec4 color;
-float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
 void main(){
- vec2 px=1.0/resolution;
  vec3 c=texture(scene,uv).rgb;
- vec3 n=texture(scene,uv+vec2(0,px.y)).rgb;
- vec3 s=texture(scene,uv-vec2(0,px.y)).rgb;
- vec3 e=texture(scene,uv+vec2(px.x,0)).rgb;
- vec3 w=texture(scene,uv-vec2(px.x,0)).rgb;
- float edge=clamp((abs(luma(n)-luma(s))+abs(luma(e)-luma(w)))*1.4,0.,.55);
- c=mix(c,(n+s+e+w)*.25,edge);
- if(film>.5){
-  c=mix(vec3(luma(c)),c,.98);
-  c=(c-.5)*1.025+.5;
-  c=pow(max(c,vec3(0)),vec3(.94,.96,.98));
-  vec2 p=uv*2.-1.;c*=1.-.085*pow(clamp(dot(p,p)*.5,0.,1.),1.5);
-  float grain=fract(sin(dot(floor(uv*resolution),vec2(12.9898,78.233))+floor(clock*24.)*.173)*43758.5453)-.5;
-  c+=grain*.004;
- }
+ c=(c-.5)*1.035+.5;
  color=vec4(clamp(c,0.,1.),1.);
 }
 '''
@@ -59,20 +42,50 @@ class Presentation:
     def __init__(self,app):
         from .sky import create_sky
         self.sky=create_sky(app)
-        self.app=app;self.film=True;self.shadows=True;self.manager=FilterManager(app.win,app.cam)
+        self.app=app;self.film=False;self.shadows=True;self.quality='Balanced'
+        self.world_enabled=True;self.shadow_time=-1;self.shadow_focus=None
+        self.manager=FilterManager(app.win,app.cam);self.quad=None
         self.texture=Texture('scene color');self.texture.setMinfilter(Texture.FTLinear);self.texture.setMagfilter(Texture.FTLinear)
-        self.quad=self.manager.renderSceneInto(colortex=self.texture)
-        if self.quad:
-            self.quad.setShader(Shader.make(Shader.SLGLSL,VERTEX,FRAGMENT))
-            self.quad.setShaderInput('scene',self.texture);self.update(0)
-        app.accept('f6',self.toggle_film);app.accept('f7',self.toggle_shadows)
+        app.accept('f6',self.toggle_film);app.accept('f7',self.toggle_shadows);app.accept('f9',self.cycle_quality)
+
     def update(self,time):
-        self.sky.setPos(self.app.camera.getX(),self.app.camera.getY(),0)
-        if self.quad:
-            self.quad.setShaderInput('clock',time);self.quad.setShaderInput('film',float(self.film))
-            self.quad.setShaderInput('resolution',Vec2(max(1,self.app.win.getXSize()),max(1,self.app.win.getYSize())))
+        a=self.app;self.sky.setPos(a.camera.getX(),a.camera.getY(),0)
+        # Stabilize the near-field map on a grid; do not redraw the district's
+        # shadows every frame. Gameplay/animation still run every frame.
+        x=round(a.camera.getX()/4)*4;y=round(a.camera.getY()/4)*4
+        focus=(x,y)
+        changed=focus!=self.shadow_focus
+        if changed:
+            a.sun_path.setPos(x-24,y-29,35);a.sun_path.lookAt(x,y,0)
+            self.shadow_focus=focus
+        buffer=a.sun.getShadowBuffer(a.win.getGsg())
+        if buffer:
+            due=changed or time-self.shadow_time>=(1/30 if self.quality=='High' else 1/20)
+            active=self.world_enabled and self.shadows and due
+            buffer.setActive(active)
+            if active:self.shadow_time=time
+
     def toggle_film(self):
-        self.film=not self.film;self.app.ui.toast('Film finish '+('ON' if self.film else 'OFF')+' / interface stays sharp')
+        self.film=not self.film
+        if self.film:
+            self.quad=self.manager.renderSceneInto(colortex=self.texture)
+            if self.quad:
+                self.quad.setShader(Shader.make(Shader.SLGLSL,VERTEX,FRAGMENT))
+                self.quad.setShaderInput('scene',self.texture)
+        else:
+            self.manager.cleanup();self.quad=None
+        for buffer in self.manager.buffers:buffer.setActive(self.world_enabled)
+        self.app.ui.toast('Contrast finish '+('ON' if self.film else 'OFF / direct sharp rendering'))
+
     def toggle_shadows(self):
-        self.shadows=not self.shadows;self.app.sun.setShadowCaster(self.shadows,2048,2048)
-        self.app.ui.toast('Sun shadows '+('ON' if self.shadows else 'OFF / lower GPU cost'))
+        self.shadows=not self.shadows;self.apply_shadow_quality()
+        self.app.ui.toast('Sun shadows '+('ON' if self.shadows else 'OFF'))
+
+    def apply_shadow_quality(self):
+        size=2048 if self.quality=='High' else 1024
+        self.app.sun.setShadowCaster(self.shadows,size,size);self.shadow_time=-1
+
+    def cycle_quality(self):
+        names=('Balanced','High','Performance');self.quality=names[(names.index(self.quality)+1)%len(names)]
+        self.shadows=self.quality!='Performance';self.apply_shadow_quality()
+        self.app.ui.toast('Graphics: '+self.quality+' / F9 changes preset')

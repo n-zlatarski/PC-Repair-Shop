@@ -16,7 +16,7 @@ def run_hardware_jobs(check,output):
             if expected in ('RAM fault','RAM upgrade','Storage fault','GPU fault','Storage upgrade'):
                 cat=j.target
                 key={'RAM fault':'replacement','RAM upgrade':'upgrade','Storage fault':'a400','GPU fault':'rx6600','Storage upgrade':'evo870'}[expected]
-                j.checkout({key:1});j.tick(60);j.receive()
+                j.checkout({key:1});j.tick(120);j.receive()
                 if cat=='RAM':
                     for i in range(2):
                         if not j.latches[i]:j.toggle_latch(i)

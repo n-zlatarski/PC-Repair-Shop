@@ -1,4 +1,26 @@
-# Latest update: NPC startup crash fixed
+# Latest update: graphics, fullscreen and performance
+
+See **GRAPHICS_FULLSCREEN_UPDATE.md** for the current changes and controls.
+First-person hands and bobbing are removed. **F11** toggles native-resolution
+fullscreen; **F8** shows FPS; **F9** cycles graphics presets. Camera and interface
+proportions now follow window resizing. Rendering and materials have been revised.
+Existing saves are retained. This guide takes precedence over the earlier notes.
+
+# Previous update: physical carrying, 1080p and Partline
+
+See **PERFORMANCE_CARRY_UPDATE.md** for current controls and limitations.
+
+**Shelf E → held component → workbench E → repair tray.** Five racks provide
+60 spaces. The default window is 1920 x 1080; **F8** shows FPS. The parts website
+now has 68 products, manufacturer filters, product pages, a basket and receipts.
+Existing saves are retained. This update guide takes precedence over the older
+feature descriptions below.
+
+# Previous update: usable racks and rear delivery
+
+See **STORAGE_REAR_UPDATE.md** for the preceding release. Its four-rack inventory workflow is superseded by the five-rack physical carrying system above. Deliveries reverse into the rear driveway.
+
+# Retained startup-crash fix
 
 See **STARTUP_FIX.md** for the fix to the `GeomTransformer.cxx:1542` startup assertion. Update the project files and run `Start_Windows.bat`; no reinstall or save reset is needed.
 
@@ -53,7 +75,7 @@ py -3.12 -m venv .venv
 | Shift + any movement direction | Run; either key press order works |
 | E | Interact with people, PCs, workbench, monitor, delivery or collection table |
 | O | Open the browser while using a computer |
-| I | View stock and return unwanted stock |
+| I | View repair tray; store parts on racks or return unwanted stock |
 | J | Current customer request / service report |
 | ESC | Close the current interface; otherwise pause |
 | Left click | Select components; operate clips and cable connectors |
@@ -78,12 +100,12 @@ cancel when you leave their interface before the test finishes.
    Look at the blue work mat and press **E** to place it.
 3. Use the monitor at the end of that bench nearest the arch. Open **HARDWARE LAB** from its desktop and run the diagnostic
    and wait four seconds. The installed RAM fails.
-4. On either computer, open **WEB BROWSER → PARTLINE / PC PARTS**, choose **RAM**, and add a compatible DDR4 stick to the cart.
+4. You can take a compatible RAM module from the workshop racks with **E**. To try the delivery flow instead, on either computer open **WEB BROWSER → PARTLINE / PC PARTS**, choose **RAM**, and add a compatible DDR4 stick to the cart.
    The $25 8 GB replacement or $45 16 GB module both solve this first fault.
    Review and place the order. These are fictional in-game funds.
-5. A Parts Express van drives to the shop (about 24 seconds of active game time).
-   Its driver gets out and waits on the pavement to the right of the front entrance.
-   Go outside, look at the courier and press **E**, inspect the products, then click
+5. A Parts Express van reverses into the rear driveway (roughly 42 seconds of active game time).
+   Its driver gets out, opens the cargo doors and brings out your package.
+   Go through the rear exit, look at the courier and press **E**, inspect the products, then click
    **COLLECT PACKAGE**. Parts become available only after this handover.
 6. Look at the customer tower on the workbench and press **E**. Hold the outlined
    power connector near the lower left until it turns green. Hold each of the
@@ -143,7 +165,7 @@ training purchase price. Full PC construction is not implemented yet.
 ## Neighborhood and customers
 
 Both original doorways now lead into a small explorable neighborhood: pavement,
-road, neighboring shop fronts, trees, street lamps, a parked delivery van and
+road, neighboring shop fronts, trees, street lamps, an animated delivery van and
 a rear service courtyard. The original shop remains the only usable interior.
 The van is not drivable. There are no traffic, day/night or city streaming systems.
 
@@ -174,6 +196,8 @@ paused. An unreadable save is preserved and opens a temporary unsaved session.
 
 | File | Responsibility |
 | --- | --- |
+| `pcshop/parts_storage.py` | Four physical racks synchronized with owned stock |
+| `pcshop/delivery_route.py` | Rear driveway route and handover positions |
 | `pcshop/model.py` | Jobs, safety/compatibility rules, stock, delivery, collection, saves |
 | `pcshop/catalog.py` | Product identities/specs, training prices, lessons, customer names |
 | `pcshop/world.py` | Neighborhood, collection table, parcels and residents |
@@ -192,13 +216,9 @@ The optional Godot export tool is retained for reproducibility, not used at runt
 
 ## Validation and limits
 
-The included `verification/results.txt` records **257 passing checks**. Its screenshots come from the running
-Panda3D application under Linux/software OpenGL. The integration test drives
-real GUI mouse events, physical part dragging, held screws, component/world
-rays and actual modifier-key events through the complete first repair,
-ordering/delivery, table storage, customer collection/payment and reset.
-Separate rule checks cover GPU/SSD repair, incompatible memory, loose connections,
-faulty part reuse, saving and duplicate payment/delivery prevention.
+See `verification/VALIDATION.md` for current results and retained historical reports.
+Tests run the actual Panda3D application under Linux/software OpenGL, exercising
+GUI mouse events, physical part dragging, held screws, rays and modifier keys.
 
 Repeat on a machine with a display:
 

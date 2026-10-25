@@ -1,3 +1,4 @@
+from pcshop.delivery_route import HANDOVER,STOP
 """Graphical acceptance test: actual mouse presses, dragging, rays and key events."""
 from panda3d.core import Vec3,Point2,Point3,MouseButton,Filename
 from direct.gui.DirectGui import DGG
@@ -19,7 +20,7 @@ def install_checks(app,output):
         app.graphicsEngine.renderFrame();app.graphicsEngine.renderFrame()
         app.win.saveScreenshot(Filename.fromOsSpecific(str((output/name).with_suffix('.jpg'))))
     def press(key):app.messenger.send(key)
-    def pointer(x,y):app.win.movePointer(0,int(x*app.win.getXSize()/1280),int(y*app.win.getYSize()/800))
+    def pointer(x,y):app.win.movePointer(0,*map(round,app.ui.design_to_pixels(x,y)))
     def down():app.win.getInputDevice(0).buttonDown(MouseButton.one(),app.clock.getFrameTime())
     def up():app.win.getInputDevice(0).buttonUp(MouseButton.one(),app.clock.getFrameTime())
     def button_xy(key):
@@ -34,7 +35,7 @@ def install_checks(app,output):
     def project(point):
         world=app.render.getRelativePoint(app.pc.root,Point3(*point));screen=Point2()
         check(app.camLens.project(app.camera.getRelativePoint(app.render,world),screen),'Service target projects onto screen')
-        return (screen.x+1)*640,(1-screen.y)*400
+        return app.ui.mouse_to_design(screen.x,screen.y)
     def hardware(name,hold=False):
         pointer(*project(HOTSPOTS[name]));yield from wait_frames(4)
         check(app.service.hit()==name,'Mouse ray reaches '+name)
@@ -74,11 +75,11 @@ def install_checks(app,output):
         yield from click('accept');check(app.job.stage=='accepted','Request accepted')
         aim((-1.5,-1.85,1.6),(-1.5,-3.14,1.51));yield
         check(app.interaction.cast()=='shop_terminal','Reception computer selected');press('e')
-        yield from click('app_browser');yield from click('visit_parts');yield from click('category_RAM');capture('04_catalog.png')
+        yield from click('app_browser');yield from click('visit_parts');yield from click('category_RAM');app.search_shop('Kingston');capture('04_catalog.png')
         yield from click('add_upgrade');yield from click('review');capture('05_checkout.png')
         yield from click('pay');check(app.job.money==355 and len(app.job.pending)==1,'Catalog checkout charges $45 and schedules delivery')
         app.job.tick(60);app.courier.sync(0);app.neighborhood.sync();yield from click('os_leave')
-        aim((3.8,-8.5,1.6),(3.8,-10.3,1.05));yield
+        aim((HANDOVER.x,HANDOVER.y-1.8,1.6),(HANDOVER.x,HANDOVER.y,1.05));yield
         check(app.interaction.cast()=='delivery','Delivered parcel selectable outside')
         capture('06_delivery.png');press('e');yield from wait_frames(5)
         check(app.mode=='delivery' and 'upgrade' not in app.job.inventory,'E opens delivery without silently adding stock')
@@ -168,7 +169,7 @@ def install_checks(app,output):
         yield from drag(button_xy('panel_tray'),project(CENTERS['Panel']))
         yield from hardware('Screw0',True);yield from hardware('Screw1',True);yield from hardware('Power',True)
         check(app.job.run_test()[0],'Replaced GPU and SSD pass with all connectors and fasteners secured')
-        app.open_mode('shop');app.shop_category='All';app.ui.show('shop')
+        app.open_mode('shop');app.shop_category='All';app.shop_brand='All';app.ui.show('shop')
         entry=app.ui.search_entry;entry['focus']=1;press('i');press('o');press('j')
         check(app.mode=='shop','Typing shortcut letters in catalog cannot open another interface')
         entry.enterText('Intel');yield from click('search')

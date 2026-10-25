@@ -20,7 +20,7 @@ for key,p in PARTS.items():
  # All print layouts are authored for the game. Product names retain real identities.
  if p.get('brand'):
   brand=p['brand'];model=p['model']
-  accent={'SAMSUNG':'#383d45','CORSAIR':'#d8c538','CRUCIAL':'#248bc2','MSI':'#72ad27','SAPPHIRE':'#c82736','INTEL':'#1877c4','AMD':'#df6d24','be quiet!':'#e78935'}[brand]
+  accent={'SAMSUNG':'#383d45','CORSAIR':'#d8c538','CRUCIAL':'#248bc2','MSI':'#72ad27','SAPPHIRE':'#c82736','INTEL':'#1877c4','AMD':'#df6d24','be quiet!':'#e78935','G.SKILL':'#b8222d','TEAMGROUP':'#b53436','XPG':'#d62c34','PATRIOT':'#2875a3','PNY':'#acbf26','ASUS':'#474b56','ZOTAC':'#d6bd27','POWERCOLOR':'#be2828','XFX':'#a72529','WD':'#1776bc','SANDISK':'#c52f30','ADATA':'#b52c38','ASROCK':'#7fa42c','GIGABYTE':'#d67c26','SEASONIC':'#2674ab','THERMALTAKE':'#b22e35','NOCTUA':'#796150','DEEPCOOL':'#29b8a7','COOLER MASTER':'#824ab0','PHANTEKS':'#678195','LIAN LI':'#3285c5'}.get(brand,'#567a9a')
   for i in range(9):d.polygon([(i*120-130,0),(i*120-60,0),(i*120+260,h),(i*120+190,h)],fill=(27+i*2,31+i*2,35+i*2))
   text(brand,35,25,52);fit(model,35,110,64)
   if cat=='RAM':

@@ -53,26 +53,12 @@ class StreetLife:
             b.ellipsoid(bird,'pigeon head',(0,-.09,.075),(.075,.08,.08),(.22,.27,.27,1))
             for x in (-.035,.035):b.lines(bird,'pigeon leg',[(x,0,-.03),(x,0,-.09),(x,-.04,-.09)],(.40,.25,.19,1),1)
             bird.flattenStrong();self.birds.append(bird)
+        from .performance import batch_joint_geometry
+        batch_joint_geometry(root)
         self.update(0)
     def car(self,parent,index):
-        b=self.app.builder;r=parent.attachNewNode('passing hatchback' if index==0 else 'passing estate')
-        paint=(.30,.42,.48,1) if index==0 else (.50,.27,.18,1);dark=(.08,.10,.11,1)
-        b.box(r,'rounded body',(0,0,.57),(1.64,3.55,.66),paint)
-        b.box(r,'bonnet',(0,-1.25,.91),(1.57,.98,.14),paint)
-        b.box(r,'passenger cabin',(0,.14,1.08),(1.43,1.9,.69),paint)
-        for y in (-.83,1.12):
-            glass=b.box(r,'angled windscreen',(0,y,1.18),(1.29,.035,.42),(.25,.36,.39,1));glass.setP(18 if y<0 else -18)
-        for x in (-.73,.73):
-            for y in (-.32,.59):b.box(r,'side glazing',(x,y,1.20),(.025,.76,.35),(.22,.32,.35,1))
-        for x in (-.82,.82):
-            for y in (-1.14,1.18):
-                wheel=b.cylinder(r,'tyre',(x,y,.34),(.61,.61,.17),dark,'rubber');wheel.setR(90)
-                hub=b.cylinder(r,'alloy hub',(x*1.12,y,.34),(.34,.34,.02),(.50,.52,.49,1));hub.setR(90)
-        for x in (-.57,.57):
-            b.box(r,'headlight',(x,-1.79,.70),(.32,.025,.16),(.80,.83,.74,1),unlit=True)
-            b.box(r,'rear light',(x,1.79,.70),(.27,.025,.15),(.55,.12,.07,1))
-        b.box(r,'front grille',(0,-1.80,.56),(.58,.02,.16),dark)
-        b.shadow(r,(0,0,.014),(2,4),.85);r.flattenStrong();return r
+        from .vehicles import car
+        return car(self.app.builder,parent,index)
     def update(self,dt):
         self.time+=dt;t=self.time
         for row in self.cars:
