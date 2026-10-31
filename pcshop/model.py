@@ -3,7 +3,7 @@ from dataclasses import dataclass,field,asdict
 from pathlib import Path
 import json,os
 from .catalog import PARTS,DEFAULT_HARDWARE,PEOPLE,SERVICEABLE
-from .requests import REQUESTS,KINDS,PROFILES
+from .requests import REQUESTS,KINDS,PROFILES,OFFICE_KINDS
 class RuleError(ValueError):pass
 
 def maintenance_defaults():
@@ -21,7 +21,8 @@ class RepairJob:
     panel_open:bool=False
     diagnosed:bool=False
     verified:bool=False
-    money:int=400
+    money:float=400
+    trade_debt:float=0
     history:list[str]=field(default_factory=list)
     number:int=1
     kind:str='RAM fault'
@@ -43,20 +44,33 @@ class RepairJob:
     desktop_preferences:dict=field(default_factory=lambda:{'reception':'blue','diagnostic':'blue'})
     maintenance:dict=field(default_factory=lambda:maintenance_defaults())
 
+    build_state:dict=field(default_factory=dict)
+
     @property
-    def title(self):return REQUESTS[self.kind][0]
+    def title(self):
+        from .builds import is_build,brief
+        return brief(self)['title'] if is_build(self) else ('Office PC / ' if self.kind in OFFICE_KINDS and self.hardware.get('GPU') is None else '')+REQUESTS[self.kind][0]
     @property
     def customer(self):return PEOPLE[(self.number-1)%len(PEOPLE)]
     @property
-    def reward(self):return REQUESTS[self.kind][1]
+    def reward(self):
+        from .builds import is_build,brief
+        return round(__import__('pcshop.builds',fromlist=['cost']).cost(self)+50,2) if is_build(self) and brief(self).get('payment')=='collection' else brief(self)['fee'] if is_build(self) else REQUESTS[self.kind][1]
     @property
     def target(self):return 'RAM' if self.kind.startswith('RAM') else self.kind.split()[0]
     @property
-    def complaint(self):return REQUESTS[self.kind][2]
+    def complaint(self):
+        from .builds import is_build,brief
+        return brief(self)['text'] if is_build(self) else ('This is my office computer for documents, email and video calls. '+REQUESTS[self.kind][2] if self.kind in OFFICE_KINDS and self.hardware.get('GPU') is None else REQUESTS[self.kind][2])
+    def unit_price(self,key):
+        return self.build_state.get('pricebook',{}).get(key,PARTS[key]['price'])
     def require(self,condition,message):
         if not condition:raise RuleError(message)
     def accept(self):
         self.require(self.stage=='offered','This request is already accepted.')
+        from .builds import deposit,is_build
+        self.require(not is_build(self) or self.build_state.get('interview',0)>=2,'Ask the customer about usage and budget first.')
+        deposit(self)
         self.stage='accepted';self.history.append(f'Accepted ticket {self.number}: {self.kind}.')
     def pickup(self):
         self.require(self.held_part is None,'Set down the component before carrying a PC.')
@@ -64,7 +78,8 @@ class RepairJob:
         self.stage='ready_carry' if self.stage=='complete' else 'carrying'
     def place(self):
         self.require(self.stage=='carrying','Collect the customer PC first.')
-        self.stage='bench';self.connected=True
+        from .builds import is_build
+        self.stage='bench';self.connected=not is_build(self)
     def disconnect(self):
         self.require(self.stage=='bench','Place the PC on the bench first.')
         self.connected=False
@@ -98,22 +113,40 @@ class RepairJob:
         key=self.part_for(category);self.require(key is not None,'The slot is empty.')
         if category=='RAM':self.require(all(self.latches),'Open BOTH DIMM latches first.')
         if category=='GPU':self.require(not self.cables['GPU'] and not self.fasteners['GPU screw'] and not self.fasteners['GPU latch'],'Disconnect GPU power, release the bracket screw and PCIe latch.')
-        if category=='Storage':self.require(not self.cables['SATA data'] and not self.cables['SATA power'] and not self.fasteners['Storage screw'],'Disconnect both SATA leads and remove the drive screw.')
+        if category=='Storage':
+            from .assembly import nvme
+            self.require(not self.fasteners['Storage screw'],'Remove the drive retaining screw first.')
+            if not nvme(key):self.require(not self.cables['SATA data'] and not self.cables['SATA power'],'Disconnect both SATA leads first.')
         self.inventory.append(key)
-        if category=='RAM':self.installed=None
+        if category=='Storage':self.build_state.pop('drives',None)
+        if category=='RAM':
+            self.installed=None;self.build_state.pop('memory',None)
         else:self.hardware[category]=None
         self.verified=False
-    def install_part(self,key,category):
+    def install_part(self,key,category,target=None):
         self.service_allowed();self.require(key in self.inventory,'Collect the delivery before using this part.')
         self.require(PARTS[key]['category']==category,'This part does not fit that slot.')
         self.require(self.part_for(category) is None,'Remove the installed part first.')
         self.require(category in SERVICEABLE,'This category is stock/inspection-only in this build.')
+        if category=='Storage':
+            from .assembly import nvme,m2_names,active_m2
+            if nvme(key):
+                valid=[n for n in m2_names(self) if active_m2(self,n)]
+                target=target or next(iter(valid),None)
+                self.require(target in valid,'This M.2 socket is unavailable with this motherboard and CPU.')
+            else:self.require(target in (None,'Storage'),'SATA drives belong in the drive bay.')
         if category=='RAM':
             self.require(PARTS[key]['ddr']==4,'DDR5 cannot fit this DDR4 motherboard. Check the notch and generation.')
             self.require(all(self.latches),'Open both DIMM latches before inserting RAM.')
-            self.installed=key
+            self.installed=key;self.build_state.pop('memory',None)
         else:
             self.hardware[category]=key
+        if category=='Storage':
+            from .assembly import nvme,m2_names,active_m2
+            if nvme(key):
+                self.build_state['drives']={target:key}
+            else:self.build_state['drives']={'Storage':key}
+            self.fasteners['Storage screw']=False
         self.inventory.remove(key);self.verified=False
     def remove_ram(self):self.remove_part('RAM')
     def install_ram(self,key):self.install_part(key,'RAM')
@@ -124,8 +157,18 @@ class RepairJob:
     def detected(self,category):
         key=self.part_for(category)
         if not key:return False
+        from .builds import is_build
+        if is_build(self):
+            wires=self.build_state.get('cables',[])
+            if category=='GPU':return 'GPU power' in wires
+            if category=='Storage':
+                from .assembly import ensure,active_m2
+                return any(k and (n.startswith('M.2') and active_m2(self,n) or n=='Storage' and 'SATA data' in wires and 'SATA power' in wires) for n,k in ensure(self)['drives'].items())
         if category=='GPU':return self.cables['GPU'] and self.fasteners['GPU latch']
-        if category=='Storage':return self.cables['SATA data'] and self.cables['SATA power']
+        if category=='Storage':
+            from .assembly import nvme,ensure,active_m2
+            if nvme(key):return any(active_m2(self,n) for n,k in ensure(self)['drives'].items() if k==key)
+            return self.cables['SATA data'] and self.cables['SATA power']
         if category=='RAM':return not any(self.latches)
         return True
     def run_test(self):
@@ -134,11 +177,15 @@ class RepairJob:
             self.diagnostic_report=[passed,title,detail]
             self.history.append(f'Ticket {self.number}: {title}.')
             return passed,title,detail
+        from .builds import is_build,validate
+        if is_build(self):
+            answer=validate(self);self.verified=answer[0];return result(*answer)
         if self.installed is None:return result(False,'NO MEMORY','POST cannot find a DIMM. Inspect the memory slots before ordering hardware.')
         if any(self.latches):return result(False,'RAM NOT LATCHED','Memory contact check failed. Power off and inspect both DIMM retaining clips. A loose module does not necessarily need replacement.')
-        if not self.hardware['GPU']:return result(False,'MISSING GRAPHICS CARD','No graphics card is installed. Inspect the PCIe slot.')
+        from .builds import integrated
+        if not self.hardware['GPU'] and not integrated(self.hardware['CPU']):return result(False,'MISSING GRAPHICS CARD','No graphics card is installed. Inspect the PCIe slot.')
         if not self.hardware['Storage']:return result(False,'MISSING STORAGE','No storage drive is installed. Inspect the SATA drive bay.')
-        if not self.cables['GPU'] or not self.fasteners['GPU latch']:
+        if self.hardware['GPU'] and (not self.cables['GPU'] or not self.fasteners['GPU latch']):
             return result(False,'GRAPHICS INITIALISATION FAILED','Display adapter did not initialise. Check its auxiliary power plug and PCIe seating before suspecting a failed card.')
         if not self.cables['SATA data'] or not self.cables['SATA power']:
             return result(False,'SATA DRIVE NOT DETECTED','Drive did not respond. Inspect BOTH SATA data and power leads first. An undetected drive is not proof that it has failed.')
@@ -148,7 +195,7 @@ class RepairJob:
           'GPU':('GRAPHICS TEST FAILED','The adapter is detected, but load testing produces corrupted frames. Connections passed. Test a known-good graphics card.'),
           'Storage':('STORAGE TEST FAILED','The drive is detected, but repeated read checks fail. Connections passed. Preserve backups and fit a reliable replacement.'),
         }
-        bad=next((cat for cat in ('RAM','GPU','Storage') if PARTS[self.part_for(cat)]['faulty']),None)
+        bad=next((cat for cat in ('RAM','GPU','Storage') if self.part_for(cat) and PARTS[self.part_for(cat)]['faulty']),None)
         if bad:return result(False,*findings[bad])
         if self.kind=='RAM upgrade' and PARTS[self.installed]['capacity']<16:
             return result(False,'UPGRADE NOT MET','Hardware works, but the customer requested at least 16 GB RAM.')
@@ -164,7 +211,9 @@ class RepairJob:
         self.require(self.stage=='ready_carry','Carry a signed-off PC to the collection table.')
         occupied={r['slot'] for r in self.ready};self.require(len(occupied)<3,'Collection table is full. Serve a returning customer first.')
         slot=next(i for i in range(3) if i not in occupied)
-        record={'id':self.number,'customer':self.customer,'slot':slot,'reward':self.reward,'installed':self.installed,'hardware':dict(self.hardware),'delay':8.0}
+        from .builds import settle
+        settle(self)
+        record={'build_state':dict(self.build_state),'kind':self.kind,'rgb':self.build_state.get('rgb',self.kind=='GPU fault'),'id':self.number,'customer':self.customer,'slot':slot,'reward':self.reward,'installed':self.installed,'hardware':dict(self.hardware),'delay':8.0}
         self.ready.append(record);self.next_job();return record
     def next_job(self):
         self.number+=1;self.kind=KINDS[(self.number-1)%len(KINDS)]
@@ -187,10 +236,19 @@ class RepairJob:
         if self.kind=='RAM seating':self.latches[1]=True
         # Returned customer parts are handed back; do not reuse a faulty item.
         self.inventory=[p for p in self.inventory if not PARTS[p]['faulty']]
+        self.build_state={}
+        from .builds import is_build,select
+        if is_build(self):select(self,self.kind)
+        elif self.kind in OFFICE_KINDS:
+            self.hardware.update(CPU='i310100',Motherboard='h510m',GPU=None,Case='officecase',Cooler='freezer',Fan='p12')
+            self.build_state={'rgb':False}
+        else:
+            if self.kind in ('GPU fault','RAM seating'):self.hardware.update(Fan='p12argb',Cooler='ax120white')
+            self.build_state={'rgb':self.kind in ('GPU fault','RAM seating')}
     def collect(self,number):
         row=next((r for r in self.ready if r['id']==number),None)
         self.require(row is not None,'This computer has already been collected.')
-        self.ready.remove(row);self.money+=row['reward'];self.completed.append(number)
+        self.ready.remove(row);paid=row['reward'];repaid=min(self.trade_debt,paid);self.trade_debt=round(self.trade_debt-repaid,2);self.money=round(self.money+paid-repaid,2);row['supplier_repaid']=repaid;self.completed.append(number)
         self.history.append(f"{row['customer']} collected PC {number}; +${row['reward']}.")
         return row
     def checkout(self,cart):
@@ -199,22 +257,29 @@ class RepairJob:
         total=0
         for key,qty in cart.items():
             self.require(key in self.stock and type(qty) is int and 0<qty<=self.stock[key],'Requested stock is unavailable.')
-            total+=PARTS[key]['price']*qty
-        self.require(total<=self.money,'Insufficient workshop funds.')
-        self.orders.append({'id':len(self.orders)+1,'items':dict(cart),'paid':total})
-        self.money-=total
+            self.require(PARTS[key].get('retail_available') or self.build_state.get('legacy_contract'),'This listing has no current in-stock new-product offer. Choose another item.')
+            total+=self.unit_price(key)*qty
+        from .builds import is_build,brief
+        credit=5000-self.trade_debt if is_build(self) and brief(self).get('payment')=='collection' and self.stage!='offered' else 0
+        total=round(total,2);self.require(total<=self.money+credit,'Insufficient funds or supplier credit. Collect completed PCs first.')
+        self.orders.append({'id':len(self.orders)+1,'items':dict(cart),'paid':total,'unit_prices':{k:self.unit_price(k) for k in cart}})
+        borrowed=max(0,total-self.money);self.trade_debt=round(self.trade_debt+borrowed,2);self.money=round(max(0,self.money-total),2)
         for key,qty in cart.items():self.stock[key]-=qty
         self.pending.append({'items':dict(cart),'remaining':4.0,'paid':total,'status':'queued'})
         return total
-    def receive(self):
+    def receive(self,key=None):
         delivered=[p for p in self.pending if p.get('status')=='waiting']
         self.require(self.courier['phase']=='waiting','Meet the courier outside when they arrive.')
         self.require(bool(delivered),'No delivery is ready yet.')
-        for order in delivered:
-            for key,qty in order['items'].items():self.inventory.extend([key]*qty)
-            self.pending.remove(order)
-        self.courier.update(phase='handover',elapsed=0.)
-        return len(delivered)
+        order=next((p for p in delivered if key is None or p['items'].get(key,0)>0),None)
+        self.require(order,'This package has already been collected.')
+        contents=dict(order['items'])
+        self.inventory.extend(k for k,n in contents.items() for _ in range(n))
+        self.pending.remove(order)
+        if not any(p.get('status')=='waiting' for p in self.pending):self.courier.update(phase='handover',elapsed=0.)
+        else:self.courier.update(phase='to_cargo',elapsed=0.,more_packages=True)
+        self.history.append('Collected shipping carton: '+str(sum(contents.values()))+' components.')
+        return contents
     def take_stored(self,index):
         self.require(type(index) is int and 0<=index<len(self.stored_parts),'This shelf space is empty.')
         self.require(self.held_part is None,'Your hands are full. Set the component on the workbench or return it to a shelf.')
@@ -245,6 +310,8 @@ class RepairJob:
         advance(self,dt,pause_courier)
         for r in self.ready:r['delay']=max(0,r['delay']-dt)
     def objective(self):
+        from .builds import is_build,cost,brief
+        if is_build(self) and self.stage=='bench':return f"{self.customer}: Assemble the requested PC. Parts ${cost(self)} / ${brief(self)['budget']}."
         prefix=f'{self.customer} / #{self.number:03d}: '
         messages={'offered':'Meet the arriving customer at reception.','accepted':'Pick up the tagged PC.','carrying':'Carry the PC through the arch to the left-wall workbench.','complete':'Pick up the verified PC and move it to the collection table.','ready_carry':'Place the PC on the collection table at the right workshop wall.'}
         if self.stage in messages:return prefix+messages[self.stage]
@@ -273,13 +340,17 @@ class RepairJob:
         j.maintenance={**maintenance_defaults(),**j.maintenance}
         if j.kind not in REQUESTS:raise ValueError('Unknown request')
         if j.stage not in ('offered','accepted','carrying','bench','complete','ready_carry'):raise ValueError('Invalid stage')
-        if type(j.money) is not int or j.money<0:raise ValueError('Invalid money')
+        if type(j.money) not in (int,float) or j.money<0:raise ValueError('Invalid money')
         if j.installed is not None and j.installed not in PARTS:raise ValueError('Unknown part')
         if j.held_part is not None and (j.held_part not in PARTS or PARTS[j.held_part]['faulty'] or PARTS[j.held_part]['category'] not in SERVICEABLE):raise ValueError('Invalid held part')
         if any(k not in PARTS for k in j.inventory):raise ValueError('Unknown inventory')
         if not isinstance(j.stored_parts,list) or len(j.stored_parts)>60 or any(k not in PARTS or PARTS[k]['category'] not in SERVICEABLE or PARTS[k]['faulty'] for k in j.stored_parts):raise ValueError('Invalid shelf stock')
         if len(j.ready)>3 or len({r['slot'] for r in j.ready})!=len(j.ready):raise ValueError('Invalid table slots')
         if set(j.hardware)!=set(DEFAULT_HARDWARE) or any(v is not None and v not in PARTS for v in j.hardware.values()):raise ValueError('Unknown hardware')
+        from .builds import migrate
+        migrate(j)
+        from .assembly import ensure
+        ensure(j)
         return j
 
 def default_save_path():

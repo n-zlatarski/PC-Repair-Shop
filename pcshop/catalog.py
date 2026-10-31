@@ -1,4 +1,4 @@
-"""Real product identities; fictional training prices, original simplified models."""
+"""Real product identities; dated USD reference prices, original simplified models."""
 def item(name,category,price,spec,**extra):
     return dict(name=name,category=category,price=price,spec=spec,faulty=False,**extra)
 PARTS={
@@ -86,6 +86,22 @@ def brand_of(p):
         if p['name'].lower().startswith(brand.lower()):return brand.upper() if brand!='be quiet!' else brand
     return p['name'].split()[0].upper()
 for p in PARTS.values():p['manufacturer']=brand_of(p)
+PARTS['i310100']=item('Intel Core i3-10100','CPU',75,'4 cores / 8 threads / LGA1200 / integrated UHD 630 graphics',socket='LGA1200',manufacturer='INTEL',brand='INTEL',model='Core i3-10100 / UHD 630')
+LEGACY_PRICES={k:p['price'] for k,p in PARTS.items()}
+from .market_data import apply
+apply(PARTS,item)
+for p in PARTS.values():p['manufacturer']=brand_of(p)
+PARTS['h510m']=item('ASUS PRIME H510M-E','Motherboard',96.02,'Micro ATX / LGA1200 / DDR4 / 2 DIMM slots',brand='ASUS',manufacturer='ASUS',model='PRIME H510M-E',ram_slots=2)
+PARTS['a520m']=item('ASRock A520M-HDV','Motherboard',73.98,'Micro ATX / AM4 / DDR4 / 2 DIMM slots',brand='ASROCK',manufacturer='ASROCK',model='A520M-HDV',ram_slots=2)
+for key,p in PARTS.items():
+ if p['category']=='Motherboard':p.setdefault('ram_slots',4);p.setdefault('max_ram',64 if p['ram_slots']==2 else 128)
+ if p['category']=='Case':p['fan_mounts']={'h510':4,'focusg':5,'phanteks':4,'lianli':5}.get(key,6)
+from .expanded_catalog import apply as expand
+expand(PARTS,item)
+for key,p in PARTS.items():
+ if p['category']=='Motherboard':p.setdefault('m2_slots',1 if key in ('h510m','a520m') else 2)
+from .retail_catalog import apply as apply_retail
+apply_retail(PARTS,item)
 # One product identity drives its installed model, stock card, package and faulty alias.
 for key,source in [('original','replacement'),('faulty_gpu','rx6600'),('faulty_storage','a400')]:
     PARTS[key]=dict(PARTS[source],faulty=True,price=0,source=source)
@@ -99,8 +115,8 @@ PEOPLE=['Maya','Daniel','Elena','Boris','Sofia','Viktor','Nadia','Ivan','Mira','
 LESSONS={
  'RAM':'RAM temporarily holds data used by running programs. Capacity affects how much work can stay in memory. DDR is the memory generation: DDR4 and DDR5 are not interchangeable. Open both latches and align the notch; never force a module.',
  'GPU':'The graphics card renders images. Release the PCIe retention latch and bracket screw before lifting it out. Disconnect its power cable first. Check the slot, power supply and case clearance when choosing a replacement.',
- 'Storage':'An SSD retains files when power is off. A 2.5-inch SATA drive needs both a SATA data cable and power. Disconnect both before removal. A hardware test does not clone files: real repairs require a backup and data migration.',
- 'CPU':'The processor executes instructions. Socket, chipset and firmware support all matter. Intel PCs here use LGA1200; Ryzen PCs use AM4. Those sockets are not interchangeable. The CPU is inspection-only. To renew paste, disconnect power, lift the cooler, clean old paste, apply a small fresh dot and refit the cooler.',
+ 'Storage':'NVMe drives fit motherboard M.2 sockets and use a retaining screw, without SATA cables. An SSD retains files when power is off. A 2.5-inch SATA drive needs both a SATA data cable and power. Disconnect both before removal. A hardware test does not clone files: real repairs require a backup and data migration.',
+ 'CPU':'The processor executes instructions. Socket, chipset and firmware support all matter. Intel PCs here use LGA1200; Ryzen PCs use AM4. Those sockets are not interchangeable. The CPU is installable during custom builds and inspection-only on repair tickets. To renew paste, disconnect power, lift the cooler, clean old paste, apply a small fresh dot and refit the cooler.',
  'Motherboard':'The motherboard connects all components. B560 uses LGA1200; B550 uses AM4. Both training platforms use DDR4 desktop DIMMs. Firmware and exact memory support still need checking in real repairs.',
- 'PSU':'The power supply converts mains power to DC. Match connectors and power requirements. Never open its enclosure. PSU replacement is not enabled in this build.',
+ 'PSU':'The power supply converts mains power to DC. Match connectors and power requirements. Never open its enclosure. Fit the PSU during custom builds; repair tickets retain their original supply.',
 }

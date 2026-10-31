@@ -1,0 +1,5 @@
+PASS Actual mouse click adds final scrolled GPU
+PASS Actual mouse click opens final GPU details
+PASS Texture cache stays bounded across full catalog
+PASS Widget count stays bounded across full catalog
+PASS AM5 / DDR5 / RTX 5070 / NVMe assembled model renders

@@ -15,9 +15,17 @@ from .shop_equipment import ShopEquipment
 from .desktops import DesktopSystem,OS_MODES
 from .shop_layout import SPAWN, INTAKE_PC, BENCH_PC, BENCH_HEADING
 
-class WorkshopApp(ShowBase):
-    def __init__(self,fresh=False):
+from .build_ui import BuildActions
+from . import builds
+from .frontend import LoadingScreen,Frontend,MENU_MODES
+
+class WorkshopApp(BuildActions,ShowBase):
+    def __init__(self,fresh=False,menu=False):
         super().__init__()
+        loading=LoadingScreen(self) if menu else None
+        def progress(n,t):
+            if loading:loading.step(n,t)
+        progress(.08,'Reading workshop progress')
         self.disableMouse(); self.setBackgroundColor(.25,.36,.39)
         self.camLens.setNearFar(.035,190); self.camLens.setFov(75)
         self.clock=ClockObject.getGlobalClock(); self.time=0
@@ -29,30 +37,43 @@ class WorkshopApp(ShowBase):
         self.start_query='';self.start_open={};self.window_maximized={};self.minimized_apps={}
         self.mode=None;self.active_terminal=None; self.testing=False; self.test_elapsed=0; self.result=None
         self.product_key='replacement';self.product_back='shop';self.delivery_index=0
-        self.cart={};self.shop_category='All';self.shop_brand='All';self.browser_history={};self.browser_index={};self.shop_search='';self.shop_desc=False;self.shop_page=0;self.inventory_page=0;self.autosave_time=0;self.last_waiting=False
+        self.cart={};self.shop_category='All';self.shop_brand='All';self.browser_history={};self.browser_index={};self.shop_search='';self.shop_desc=False;self.shop_page=0;self.shop_scroll=0;self.inventory_page=0;self.autosave_time=0;self.last_waiting=False
         self.selected_component='RAM'; self.selected_part='replacement'
         self.hover=None; self.keys={}; self.player=Vec3(*SPAWN); self.heading=0; self.pitch=-7
         self.mouse_ready=False; self.repair_distance=2.15
         self.interaction=Interaction(self); self.builder=Builder(self)
+        progress(.20,'Building the workshop')
         self.workshop=Workshop(self); self.pc=CustomerPC(self)
-        self.service=ServiceControls(self);self.neighborhood=Neighborhood(self);self.customers=Customers(self)
+        self.service=ServiceControls(self)
+        from .assembly_controls import AssemblyControls
+        self.assembly_controls=AssemblyControls(self)
+        progress(.38,'Loading the neighborhood')
+        self.neighborhood=Neighborhood(self);self.customers=Customers(self)
         from .courier import Courier
         self.courier=Courier(self)
         from .street_life import StreetLife
         self.street_life=StreetLife(self)
+        progress(.64,'Preparing workstations and equipment')
         self.ui=Interface(self)
         self.equipment=ShopEquipment(self);self.service.tools.build_board()
         for light in self.room_lights:
             for target in (self.workshop.static,self.pc.root,self.equipment.storage.root,self.service.root):target.setLight(light)
+        from .art_direction import decorate
+        self.visual_details=decorate(self)
         self.graphics=Presentation(self)
+        progress(.82,'Starting workshop computers')
         self.desktops=DesktopSystem(self)
         from .held_stock import HeldStock
         self.held_stock=HeldStock(self)
         from .display import Display
         self.display=Display(self)
         self.bind_inputs(); self.sync_pc(); self.update_camera()
+        self.frontend=Frontend(self)
+        progress(1.,'Ready to open your workshop')
+        if loading:loading.destroy()
         self.taskMgr.add(self.update,'workshop update')
-        self.open_mode('welcome' if self.job.stage=='offered' else 'pause')
+        self.open_mode('main_menu' if menu else 'welcome' if self.job.stage=='offered' else 'pause')
+        if menu and self.frontend.settings['fullscreen']:self.display.toggle()
         if load_warning: self.ui.toast(load_warning)
 
     def bind_inputs(self):
@@ -63,6 +84,7 @@ class WorkshopApp(ShowBase):
             thrower.node().setModifierButtons(ModifierButtons())
         for key in ('w','a','s','d','shift'):
             self.accept(key,self.set_key,[key,True]); self.accept(key+'-up',self.set_key,[key,False])
+        self.accept('c',self.focus_view,[True]);self.accept('c-up',self.focus_view,[False])
         self.accept('e',self.interact); self.accept('escape',self.escape)
         self.accept('j',self.open_ticket);self.accept('o',self.open_shop);self.accept('i',self.open_inventory)
         self.accept('mouse1',self.service.down);self.accept('mouse1-up',self.service.up)
@@ -74,6 +96,11 @@ class WorkshopApp(ShowBase):
 
     def toggle_fps(self):
         self.fps_visible=not self.fps_visible;self.setFrameRateMeter(self.fps_visible)
+        if hasattr(self,'frontend'):self.frontend.settings['fps']=self.fps_visible;self.frontend.persist()
+
+    def focus_view(self,enabled):
+        self.focused=bool(enabled and self.mode is None)
+        if hasattr(self,'display'):self.display.resize()
 
     def set_key(self,key,value): self.keys[key]=value
 
@@ -94,16 +121,18 @@ class WorkshopApp(ShowBase):
     def center_pointer(self): self.win.movePointer(0,self.win.getXSize()//2,self.win.getYSize()//2)
 
     def update_camera(self):
-        if self.mode=='repair':
+        if self.mode in ('repair','buildbench'):
             yaw=math.radians(self.service.yaw);pitch=math.radians(self.service.pitch)
             self.camera.setPos(self.render.getRelativePoint(self.pc.root,Vec3(math.sin(yaw)*self.repair_distance,-math.cos(yaw)*self.repair_distance,.365+math.sin(pitch)*self.repair_distance)))
             self.camera.lookAt(self.render.getRelativePoint(self.pc.root,Vec3(0,0,.345)))
         else: self.camera.setPos(self.player); self.camera.setHpr(self.heading,self.pitch,0)
 
     def open_mode(self,mode):
+        self.focused=False
+        if mode=='repair' and builds.is_build(self.job):mode='buildbench'
         if self.testing and mode!='diagnostic': self.testing=False;self.result=None
-        if self.mode=='repair' and mode!='repair': self.service.cancel();self.pc.highlight(None); self.camLens.setFov(75)
-        if mode=='repair' and self.mode!='repair':self.service.yaw=0;self.service.pitch=0
+        if self.mode in ('repair','buildbench') and mode not in ('repair','buildbench'): self.service.cancel();self.pc.highlight(None); self.camLens.setFov(75)
+        if mode in ('repair','buildbench') and self.mode not in ('repair','buildbench'):self.service.yaw=0;self.service.pitch=0
         if self.active_terminal and mode in ('browser','shop','checkout','guide','network','product_page','receipt') and not getattr(self,'history_replay',False):
             station=self.active_terminal;rows=self.browser_history.setdefault(station,[]);index=self.browser_index.get(station,-1)
             entry=(mode,self.product_key if mode=='product_page' else None)
@@ -111,7 +140,7 @@ class WorkshopApp(ShowBase):
                 del rows[index+1:];rows.append(entry);self.browser_index[station]=len(rows)-1
         if self.active_terminal and mode=='product_page':self.job.desktop_products[self.active_terminal]=self.product_key
         self.mode=mode; self.keys.clear(); self.capture_mouse(False)
-        self.set_world_rendering(not (self.active_terminal and mode in OS_MODES and mode!='security'))
+        self.set_world_rendering(mode not in MENU_MODES and not (self.active_terminal and mode in OS_MODES and mode!='security'))
         self.ui.toast_node.hide(); self.ui.toast_until=0; self.ui.show(mode)
         if mode=='repair': self.camLens.setFov(44)
         if hasattr(self,'display'):self.display.resize()
@@ -131,11 +160,16 @@ class WorkshopApp(ShowBase):
         if self.testing:
             self.testing=False; self.ui.toast('Diagnostic cancelled. Run the full test to record a result.')
         self.set_world_rendering(True)
+        if hasattr(self,'frontend'):self.frontend.session_started=True
         self.service.cancel();self.keys.clear();self.active_terminal=None;self.mode=None; self.pc.highlight(None); self.hover=None
         self.camLens.setFov(75); self.update_camera(); self.ui.show(None); self.capture_mouse(True)
         if hasattr(self,'display'):self.display.resize()
 
     def escape(self):
+        if self.mode=='main_menu':return
+        if self.mode=='game_settings':self.open_mode(self.frontend.back);return
+        if self.mode in ('controls','credits','new_confirm'):self.open_mode('pause' if self.frontend.session_started else 'main_menu');return
+        if self.mode=='build_cables':self.open_mode('buildbench');return
         if self.active_terminal and self.start_open.get(self.active_terminal):
             self.start_open[self.active_terminal]=False;self.ui.show(self.mode);return
         if self.active_terminal and self.mode!='desktop':
@@ -144,14 +178,17 @@ class WorkshopApp(ShowBase):
         else: self.open_mode('pause')
 
     def open_ticket(self):
+        if self.mode in ('main_menu','game_settings','new_confirm','controls','credits'):return
         if not self.testing and not self.typing(): self.open_mode('complete' if self.job.stage=='complete' else 'ticket')
 
     def accept_job(self):
         try:
             self.job.require(self.customers.at_counter,'Wait for the customer to reach reception.')
-            self.job.accept();self.customers.accepted();self.sync_pc()
+            self.job.accept()
+            if builds.is_build(self.job):self.job.stage='bench';self.job.connected=False
+            self.customers.accepted();self.sync_pc()
         except RuleError as e: self.ui.toast(str(e)); return
-        self.save(); self.close_mode(); self.ui.toast('Ticket accepted. The tagged PC is on the reception counter to your left.')
+        self.save(); self.close_mode(); self.ui.toast('Build accepted. Order and collect components, then assemble the PC at the empty work mat.' if builds.is_build(self.job) else 'Ticket accepted. The tagged PC is on the reception counter to your left.')
 
     def sync_pc(self):
         self.pc.root.reparentTo(self.render); self.pc.root.setScale(1); self.pc.root.setHpr(0,0,0)
@@ -162,6 +199,7 @@ class WorkshopApp(ShowBase):
         else: self.pc.root.setPos(*INTAKE_PC)
         self.pc.sync(self.job)
         if hasattr(self,'service'):self.service.sync()
+        if hasattr(self,'assembly_controls'):self.assembly_controls.sync()
         if hasattr(self,'neighborhood'):self.neighborhood.sync()
 
     def prompt_for(self,target):
@@ -271,12 +309,15 @@ class WorkshopApp(ShowBase):
         if mode:self.launch_app(mode)
         else:self.ui.toast('This training browser supports partline.shop, guide.bench and router.bench.')
     def filtered_products(self):
-        keys=[k for k,p in PARTS.items() if k in self.job.stock and (self.shop_category=='All' or p['category']==self.shop_category) and (self.shop_brand=='All' or p['manufacturer']==self.shop_brand) and self.shop_search.lower() in (p['name']+' '+p['spec']).lower()]
-        return sorted(keys,key=lambda k:PARTS[k]['price'],reverse=self.shop_desc)
+        keys=[k for k,p in PARTS.items() if k in self.job.stock and p.get('retail_verified') and (not getattr(self,'white_only',False) or p.get('finish')=='White') and (self.shop_category=='All' or p['category']==self.shop_category) and (self.shop_brand=='All' or p['manufacturer']==self.shop_brand) and self.shop_search.lower() in (p['name']+' '+p['spec']).lower()]
+        return sorted(keys,key=lambda k:self.job.unit_price(k),reverse=self.shop_desc)
+    def toggle_white(self):
+        self.white_only=not getattr(self,'white_only',False);self.shop_page=0;self.shop_scroll=0;self.ui.show('shop')
+
     def filter_brand(self,value):
         if value==self.shop_brand:return
-        self.shop_brand=value;self.shop_page=0;self.ui.show('shop')
-    def view_product(self,key):self.product_key=key;self.open_mode('product_page')
+        self.shop_brand=value;self.shop_page=0;self.shop_scroll=0;self.ui.show('shop')
+    def view_product(self,key):self.product_photo=0;self.product_specs_page=0;self.product_key=key;self.open_mode('product_page')
     def browser_step(self,delta):
         station=self.active_terminal;rows=self.browser_history.get(station,[]);index=self.browser_index.get(station,-1)+delta
         if not 0<=index<len(rows):return
@@ -298,23 +339,26 @@ class WorkshopApp(ShowBase):
     def unpack_delivery(self):
         try:
             self.job.require((self.player-self.courier.driver.root.getPos()).length()<3.2,'Go outside and meet the courier first.')
-            self.job.receive()
+            self.job.receive(getattr(self,'delivery_key',None))
             self.courier.sync(0)
         except RuleError as e:self.ui.toast(str(e));return
         self.neighborhood.sync();self.save();self.close_mode()
-        self.ui.toast('Retail packages unpacked. Parts are in your repair tray (I); STORE returns them to the racks.')
+        self.ui.toast('One retail box unpacked. The courier will fetch the next box if your order has more items.')
     def mouse_in_model_area(self):
         if not self.mouseWatcherNode.hasMouse(): return False
         m=self.mouseWatcherNode.getMouse(); x,y=self.ui.mouse_to_design(m.x,m.y)
         return 310<x<970 and 90<y<725
 
     def reset_view(self):
-        if self.mode=='repair':
+        if self.mode=='buildbench' and self.assembly_controls.drag:self.assembly_controls.rotate();return
+        if self.mode in ('repair','buildbench'):
             self.service.yaw=0;self.service.pitch=0;self.repair_distance=2.15;self.update_camera()
 
     def zoom(self,delta):
-        if self.mode=='repair' and self.mouse_in_model_area():
-            self.repair_distance=max(2.05,min(2.65,self.repair_distance+delta)); self.update_camera()
+        if self.mode=='shop':
+            self.ui.scroll_market(92 if delta>0 else -92);return
+        if self.mode in ('repair','buildbench') and self.mouse_in_model_area():
+            self.repair_distance=max(1.35,min(2.85,self.repair_distance+delta)); self.update_camera()
 
     def start_diagnostic(self):
         if self.mode!='diagnostic' or self.testing: return
@@ -341,7 +385,9 @@ class WorkshopApp(ShowBase):
         try: self.job.save(self.save_path)
         except OSError: self.ui.toast('Progress could not be saved. Check permissions or disk space; the current session still works.')
 
-    def quit(self): self.save(); self.userExit()
+    def quit(self):
+        if self.frontend.session_started:self.save()
+        self.frontend.persist();self.userExit()
 
     def move(self,dt):
         forward=int(self.keys.get('w',False))-int(self.keys.get('s',False))
@@ -360,8 +406,10 @@ class WorkshopApp(ShowBase):
 
     def update(self,task):
         dt=min(self.clock.getDt(),.05); self.time+=dt
-        if self.mode not in ('pause','reset','welcome'):
-            self.job.tick(dt,pause_courier=self.courier.blocked());self.courier.sync(dt);self.customers.update(dt);self.street_life.update(dt);self.neighborhood.sync();self.equipment.storage.sync()
+        if self.mode not in MENU_MODES:
+            self.job.tick(dt,pause_courier=self.courier.blocked());self.courier.sync(dt);self.customers.update(dt)
+            if self.graphics.world_enabled:self.street_life.update(dt)
+            self.neighborhood.sync();self.equipment.storage.sync()
             self.autosave_time+=dt
             if self.autosave_time>5:self.save();self.autosave_time=0
             if self.mode=='ticket' and self.customers.at_counter!=self.last_waiting:self.ui.show('ticket')
@@ -370,12 +418,13 @@ class WorkshopApp(ShowBase):
             if self.win.getProperties().getForeground():
                 pointer=self.win.getPointer(0); cx=self.win.getXSize()//2; cy=self.win.getYSize()//2
                 if self.mouse_ready:
-                    self.heading-=(pointer.getX()-cx)*.12
-                    self.pitch=max(-75,min(75,self.pitch-(pointer.getY()-cy)*.12))
+                    sensitivity=self.frontend.settings['sensitivity']
+                    self.heading-=(pointer.getX()-cx)*sensitivity
+                    self.pitch=max(-75,min(75,self.pitch-(pointer.getY()-cy)*sensitivity))
                 self.center_pointer(); self.mouse_ready=True
             self.move(dt); self.update_camera()
             self.hover=self.interaction.cast(); self.ui.prompt.node().setText(self.prompt_for(self.hover))
-        elif self.mode=='repair':
+        elif self.mode in ('repair','buildbench'):
             self.service.update(dt)
             name=None
             if self.job.panel_open and self.mouse_in_model_area():
@@ -390,6 +439,7 @@ class WorkshopApp(ShowBase):
         if self.job.connected:
             for rotor in self.pc.rotors: rotor.setR((rotor.getR()+dt*210)%360)
         self.held_stock.sync()
+        self.pc.update_rgb(self.time)
         self.desktops.update(dt)
         self.graphics.update(self.time)
         self.ui.update(self.time)
@@ -400,22 +450,23 @@ class WorkshopApp(ShowBase):
     def inspect(self,name):
         self.selected_component=name;self.repair_tray_page=0;self.ui.show('repair')
     def start_orbit(self):
-        if self.mode=='repair' and self.mouse_in_model_area():self.service.orbit=True;self.service.last=None
+        if self.mode in ('repair','buildbench') and self.mouse_in_model_area():self.service.orbit=True;self.service.last=None
     def stop_orbit(self):self.service.orbit=False
     def typing(self):
         return any(entry is not None and bool(entry['focus']) for entry in (getattr(self.ui,'search_entry',None),getattr(self.ui,'browser_address',None),getattr(self.ui,'start_search_entry',None)))
     def open_inventory(self):
+        if self.mode in ('main_menu','game_settings','new_confirm','controls','credits'):return
         if not self.typing():self.open_mode('inventory')
     def open_shop(self):
         if self.testing or self.typing():return
         if self.active_terminal:self.launch_app('browser')
         else:self.ui.toast('Use a shop computer with E, then open Web Browser to order parts.')
     def filter_shop(self,category):
-        self.shop_category=category;self.shop_page=0;self.ui.show('shop')
+        self.shop_category=category;self.shop_page=0;self.shop_scroll=0;self.ui.show('shop')
     def search_shop(self,value):
-        self.shop_search=value.strip();self.shop_page=0;self.ui.show('shop')
+        self.shop_search=value.strip();self.shop_page=0;self.shop_scroll=0;self.ui.show('shop')
     def sort_shop(self):
-        self.shop_desc=not self.shop_desc;self.ui.show('shop')
+        self.shop_desc=not self.shop_desc;self.shop_scroll=0;self.ui.show('shop')
     def page_shop(self,delta):
         self.shop_page=max(0,self.shop_page+delta);self.ui.show('shop')
     def page_inventory(self,delta):
@@ -438,5 +489,5 @@ class WorkshopApp(ShowBase):
         except RuleError as e:self.ui.toast(str(e))
     def return_stock(self,key):
         if key in self.job.inventory and PARTS[key]['price']>0:
-            self.job.inventory.remove(key);self.job.money+=PARTS[key]['price'];self.job.stock[key]+=1
+            self.job.inventory.remove(key);refund=self.job.unit_price(key);repaid=min(self.job.trade_debt,refund);self.job.trade_debt=round(self.job.trade_debt-repaid,2);self.job.money=round(self.job.money+refund-repaid,2);self.job.stock[key]+=1
             self.save();self.ui.show('inventory')

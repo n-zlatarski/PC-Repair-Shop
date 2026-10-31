@@ -7,12 +7,17 @@ STYLES=('terrace','brick apartments','deco','glass office','workshop','balconies
 def building(app,parent,x,y,w,d,h,index,heading=0):
     b=app.builder;g=parent.attachNewNode(STYLES[index%6]);g.setPos(x,y,0);g.setH(heading)
     rng=random.Random(index*177+int(x));style=index%6
-    colors=[(.78,.69,.53,1),(.55,.29,.21,1),(.77,.76,.68,1),(.42,.49,.51,1),(.46,.49,.45,1),(.67,.61,.50,1)]
+    colors=[(.78,.69,.53,1),(.92,.88,.80,1),(.77,.76,.68,1),(.42,.49,.51,1),(.46,.49,.45,1),(.67,.61,.50,1)]
     trim=(.75,.73,.65,1);dark=(.16,.20,.20,1);metal=(.20,.25,.25,1)
     def box(name,pos,size,c=trim,tex=None,unlit=False):return b.box(g,name,pos,size,c,tex,unlit)
     # All silhouettes fit their previous lots; porch ornaments do not block pavements.
     app.workshop.block_box((x-w/2,y-d/2,0),(x+w/2,y+d/2,h))
-    box('structural walls',(0,0,h/2),(w,d,h),colors[style],'brick' if style==1 else 'plaster')
+    walls=box('structural walls',(0,0,h/2),(w,d,h),colors[style],'brick' if style==1 else 'plaster')
+    from panda3d.core import GeomVertexReader,GeomVertexRewriter
+    for k in range(walls.node().getNumGeoms()):
+        data=walls.node().modifyGeom(k).modifyVertexData();reader=GeomVertexReader(data,'vertex');normal=GeomVertexReader(data,'normal');uv=GeomVertexRewriter(data,'texcoord')
+        while not reader.isAtEnd():
+            p=reader.getData3();n=normal.getData3();coords=(p.x*w,p.y*d,p.z*h);axis=max(range(3),key=lambda j:abs(n[j]));axes=[j for j in range(3) if j!=axis];uv.setData2(coords[axes[0]]/2.5,coords[axes[1]]/2.5)
     box('stone footing',(0,0,.22),(w+.06,d+.06,.44),(.40,.42,.38,1),'concrete')
     front=-d/2-.04
     def window(px,z,ww=1.05,hh=1.35,side=0,seed=0):
@@ -57,6 +62,18 @@ def building(app,parent,x,y,w,d,h,index,heading=0):
                 box('terracotta planter',(px+.28,front-.54,z-.63),(.40,.24,.23),(.48,.25,.15,1))
                 for xx in (-.10,.02,.13):b.ellipsoid(g,'balcony plant',(px+.28+xx,front-.55,z-.43),(.23,.24,.23),(.20,.33,.18,1),'foliage')
         if floor and style in (1,2,5):box('storey stringcourse',(0,front-.02,z-1.10),(w+.08,.16,.15),trim)
+    if style in (1,2,5):
+        awning=(.19,.29,.26,1) if style!=2 else (.34,.19,.13,1)
+        for side in (-1,1):
+            px=side*w*.30;ww=w*.26
+            box('shopfront surround',(px,front-.10,1.27),(ww+.12,.18,2.15),dark);box('shopfront glazing',(px,front-.20,1.28),(ww,.018,2.02),(.18,.27,.29,1))
+            for z in (.65,1.25):
+                box('display shelf',(px,front-.225,z),(ww*.90,.03,.035),(.46,.37,.25,1),'wood')
+                for j in range(4):box('display object',(px-ww*.33+j*ww*.22,front-.249,z+.14),(ww*.13,.025,.23),(.32+j*.06,.32+j*.035,.24+j*.025,1),'cardboard')
+            for xx in (px-ww/2,px,px+ww/2):box('shopfront mullion',(xx,front-.26,1.28),(.037,.035,2.05),metal)
+            canopy=g.attachNewNode(mesh('sloping fabric awning',[[(-ww*.60,0,0),(ww*.60,0,0),(ww*.60,-.68,-.18),(-ww*.60,-.68,-.18)]]));canopy.setPos(px,front-.13,2.57);canopy.setColor(*awning);canopy.setTwoSided(True);b.surface(canopy,'fabric')
+            box('awning valance',(px,front-.81,2.33),(ww*1.20,.035,.13),awning,'fabric')
+            for xx in (px-ww*.55,px+ww*.55):b.lines(g,'awning support',[(xx,front-.13,2.29),(xx,front-.78,2.40)],metal,2)
     # Proper entrance with a threshold, handle and overhead lamp; no text signs.
     box('door recess',(0,front-.035,1.05),(1.38,.13,2.18),dark)
     box('front door',(0,front-.12,1.03),(1.13,.035,2.02),(.26,.30,.28,1),'wood' if style in (0,5) else 'metal')

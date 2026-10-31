@@ -1,4 +1,40 @@
-# Latest update: graphics, fullscreen and performance
+# Release 22 — scrolling marketplace, more components and visible screws
+
+Read **UPDATE_22.md**. The counter plaque and all bicycles are removed. Browse 207 listings by scrolling, including 122 additions across every component category. Use **Find loose screw** at the assembly bench, then hold each gold marker to tighten it. Extract into a new folder and run **Start_Windows.bat**. Existing saves remain compatible.
+
+# Previous archive repair — release 21
+
+This replaces the truncated release 20 ZIP. Extract this complete archive into a new folder and run **Start_Windows.bat**. Existing saves remain compatible. The larger city, detailed NPCs, revised cars/van, passing traffic, cycle lanes and animated cyclists have been restored and checked. The marked menu photograph remains removed and the workshop shadow correction is retained.
+
+See **ARCHIVE_REPAIR.md** for recovery and verification details.
+
+# Previous update: larger living city and revised character art
+
+Read **CITY_LIFE_VISUAL_UPDATE.md**. Extract into a new folder and run **Start_Windows.bat**. Existing saves remain compatible. The marked menu photograph is removed. This release adds detailed human faces, revised vehicles and storefronts, passing traffic, cycle lanes, riders and a larger district, and replaces the intermittent shadow-buffer update responsible for a possible workshop flash.
+
+# Previous update: 1080p, NVMe and combined deliveries
+
+Read **NVME_DELIVERY_GRAPHICS_UPDATE.md**. Extract into a new folder and run **Start_Windows.bat**. Existing saves remain compatible. Each checkout now arrives in one larger carton. This version supersedes historical delivery and display instructions below.
+
+# Previous update: graphical makeover and boxed shelf stock
+
+Read **GRAPHICAL_MAKEOVER_UPDATE.md** for the new lighting, materials, shop finishes, case details and package-only shelves. Run **Start_Windows.bat**; existing saves remain compatible.
+
+# Previous update: hands-on assembly and real product listings
+
+Read **HANDS_ON_ASSEMBLY_UPDATE.md** for the current controls, $50 collection-payment rules, individual DIMMs/fans, separate parcels and price snapshot. These notes supersede older update descriptions below.
+
+# Previous update: clarity, customer consultations and white PCs
+
+Read **CLARITY_CUSTOMERS_UPDATE.md** and **PRICE_REFERENCE.md**. Run **Start_Windows.bat**. Existing saves remain compatible.
+
+# Previous update: menus, widescreen computers and custom PC builds
+
+See **MENUS_AND_BUILDS.md** for the current controls and step-by-step build flow.
+Launch with **Start_Windows.bat**. Continue keeps your existing save.
+To try a build immediately, open an unaccepted ticket with **J**, choose **Custom build requests**, and accept a brief at reception.
+
+# Previous update: graphics, fullscreen and performance
 
 See **GRAPHICS_FULLSCREEN_UPDATE.md** for the current changes and controls.
 First-person hands and bobbing are removed. **F11** toggles native-resolution

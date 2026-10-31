@@ -59,19 +59,21 @@ class Builder:
     def __init__(self,app):
         self.app=app; self.cube=cube_mesh();self.bevel=bevel_mesh()
         # FontPool expects a string in Panda path syntax, not a native Windows path.
-        self.font=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Interface.ttf')).getFullpath()); self.font.setPixelsPerUnit(80)
-        self.textures={}
+        self.font=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Interface.ttf')).getFullpath()).makeCopy(); self.font.setPixelsPerUnit(128)
+        self.font.setMinfilter(Texture.FTLinearMipmapLinear);self.font.setMagfilter(Texture.FTLinear);self.font.setAnisotropicDegree(16)
+        from .art_direction import materials
+        self.materials=materials();self.textures={}
         for path in sorted((ASSETS/'materials').glob('*.png')):
             key=path.stem
             t=app.loader.loadTexture(Filename.fromOsSpecific(str(path)))
             t.setWrapU(Texture.WMRepeat); t.setWrapV(Texture.WMRepeat)
             t.setMinfilter(Texture.FTLinearMipmapLinear); t.setMagfilter(Texture.FTLinear)
-            t.setAnisotropicDegree(4)
+            t.setAnisotropicDegree(16)
             self.textures[key]=t
         self.textures['floor']=self.textures['tile']
 
     def box(self,parent,name,pos,size,color,texture=None,unlit=False):
-        node=parent.attachNewNode((self.bevel if min(size)>.055 and max(size)<3 else self.cube).makeCopy()); node.setName(name)
+        node=parent.attachNewNode((self.bevel if min(size)>.012 and max(size)<2.6 else self.cube).makeCopy()); node.setName(name)
         node.setPos(*pos); node.setScale(*size); node.setColor(*color)
         plain=any(word in name.lower() for word in ('marking','road dash','crosswalk','driveway edge'))
         if plain:texture=None;unlit=True
@@ -114,7 +116,7 @@ class Builder:
             a=i*math.tau/steps; b=(i+1)*math.tau/steps
             faces.append([(r*math.cos(t),0,r*math.sin(t)) for r,t in ((radius,a),(radius,b),(radius-thickness,b),(radius-thickness,a))])
         node=parent.attachNewNode(mesh('ring',faces)); node.setTwoSided(True)
-        node.setPos(*pos); node.setColor(*color); node.setLightOff(1)
+        node.setPos(*pos); node.setColor(*color)
         return node
 
     def fan(self,parent,pos,radius=.07):
@@ -133,6 +135,7 @@ class Builder:
         from panda3d.core import TextureStage
         if key not in self.textures:return
         node.setTexture(self.textures[key],1)
+        if key in self.materials:node.setMaterial(self.materials[key],1)
         if size:
             axes=sorted((abs(x) for x in size),reverse=True)
             scale=1.3 if key in ('wood','brick','tile','ceiling') else 2
@@ -195,10 +198,10 @@ class Builder:
         if not hasattr(self,'leaf_card'):
             self.leaf_card=mesh('leaf spray',[[(-.5,0,-.5),(.5,0,-.5),(.5,0,.5),(-.5,0,.5)]])
         group=parent.attachNewNode('leaf sprays');group.setPos(*center)
-        for i in range(38):
-            a=rng.random()*math.tau;r=rng.uniform(.6,1.5)
+        for i in range(92):
+            a=rng.random()*math.tau;r=rng.uniform(.15,1.45)
             node=group.attachNewNode(self.leaf_card.makeCopy())
-            node.setPos(math.cos(a)*r,math.sin(a)*r,rng.uniform(-.7,.7));node.setScale(rng.uniform(.8,1.4))
-            node.setHpr(rng.random()*360,rng.uniform(-65,65),rng.uniform(-50,50));node.setColor(.42,.47,.28,1)
+            node.setPos(math.cos(a)*r,math.sin(a)*r,rng.uniform(-.85,.9));node.setScale(rng.uniform(.8,1.15))
+            node.setHpr(rng.random()*360,rng.uniform(-65,65),rng.uniform(-50,50));node.setColor(.55,.61,.40,1)
             node.setTexture(self.textures['leaves'],1);node.setTransparency(TransparencyAttrib.MBinary);node.setTwoSided(True)
         group.flattenStrong();return group

@@ -93,7 +93,9 @@ class RepairTools:
         for i,key in enumerate(TOOLS):
             y=1.02+i*.59
             n=tool_model(b,g,key);n.setPos(-9.19,y,1.83);n.setHpr(90,0 if key=='meter' else 90,0);n.setScale(1.55)
-            b.text(g,TOOLS[key][0].upper(),(-9.18,y,2.09),.047,(.82,.87,.9,1),h=90,align=TextNode.ACenter)
+            names={'driver':'DRIVER','brush':'BRUSH','air':'AIR','cutters':'CUTTERS','tweezers':'TWEEZERS','meter':'METER','cloth':'CLOTH','paste':'PASTE'}
+            b.box(g,'readable tool nameplate',(-9.20,y,2.105),(.025,.55,.16),(.028,.038,.05,1),unlit=True)
+            b.text(g,names.get(key,key.upper()),(-9.18,y,2.08),.078,(.94,.97,1,1),h=90,align=TextNode.ACenter)
             b.box(g,'tool hook',(-9.24,y,1.86),(.13,.025,.025),METAL)
             a.interaction.box(g,'tool_pick:'+key,(-9.12,y,1.70),(.20,.34,.44))
             self.board_tools.append(n)
@@ -104,6 +106,13 @@ class RepairTools:
         if self.app.mode=='repair':self.app.ui.show('repair')
     def sync(self):
         j=self.app.job;m=j.maintenance
+        from .builds import is_build
+        if is_build(j):
+            self.root.hide()
+            for n in self.targets.values():n.node().setIntoCollideMask(BitMask32.allOff())
+            self.app.pc.cooler.show() if j.hardware.get('Cooler') else self.app.pc.cooler.hide()
+            return
+        self.root.show()
         if j.number!=self.job_number:self.fan_locked=False;self.job_number=j.number
         self.fan_clamp.show() if self.fan_locked and j.panel_open else self.fan_clamp.hide()
         self.air_stream.hide();self.debris.setPos(*TARGETS['Debris'])

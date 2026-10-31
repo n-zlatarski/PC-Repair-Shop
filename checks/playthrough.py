@@ -142,9 +142,9 @@ def install_checks(app,output):
         check(not app.neighborhood.cases,'Collected tower disappears from collection bay')
         aim((-6,-10.8,1.6),(2,-17,1.5));capture('16_neighborhood.png')
         aim((8,-10.8,1.6),(-2,-4.8,1.5));capture('17_shop_exterior.png')
-        press('escape');yield from click('new');yield from click('reset_no');yield from click('resume')
+        press('escape');yield from click('new');yield from click('new_no');yield from click('continue')
         check(app.job.money==505,'Cancel reset preserves progress')
-        press('escape');yield from click('new');yield from click('reset_yes')
+        press('escape');yield from click('new');yield from click('new_yes')
         check(app.job.money==400 and not app.job.ready and not app.job.pending,'Confirmed reset clears workshop progress')
         check(len(app.customers.walkers)==12 and not app.customers.collectors,'Reset recreates residents without old collectors')
         # Separate fixture: verify all GPU/SATA hit targets and drag gestures, not just rules.

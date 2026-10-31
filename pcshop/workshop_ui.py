@@ -11,9 +11,12 @@ from .desktops import OS_MODES
 from .repair_tools import TOOLS
 from .store_ui import StoreUI
 
-class Interface(DesktopUI,BaseInterface):
+from .build_ui import BuildUI
+from . import builds
+
+class Interface(BuildUI,DesktopUI,BaseInterface):
     def show(self,mode):
-        self._mode=mode;self.browser_address=None;self.start_search_entry=None
+        self._mode=mode;self.resize();self.browser_address=None;self.start_search_entry=None
         if hasattr(self,'desktop_backdrop'):
             self.desktop_backdrop.show() if mode in OS_MODES and self.app.active_terminal else self.desktop_backdrop.hide()
         if getattr(self,'product_view',None):self.product_view.close();self.product_view=None
@@ -23,10 +26,15 @@ class Interface(DesktopUI,BaseInterface):
                 'pause':self.pause,'complete':self.completion,'reset':self.reset_confirm,'shop':self.shop,
                 'checkout':self.checkout,'product_page':self.product_page,'receipt':self.receipt,'inventory':self.inventory,'product':self.product,'delivery':self.delivery,
                 'desktop':self.desktop,'browser':self.browser,'guide':self.guide,'network':self.network,'security':self.security,'files':self.files,'settings':self.settings,'report':self.report,'lock':self.lock}.get(mode)
-        if method:method()
+        if mode in ('main_menu','game_settings','controls','credits','new_confirm','pause') and hasattr(self.app,'frontend'):self.app.frontend.draw(self,mode)
+        elif mode=='buildbench':self.buildbench()
+        elif mode=='build_cables':self.build_cables()
+        elif mode=='build_orders':self.build_orders()
+        elif method:method()
         if mode in OS_MODES and self.os_active():
             if mode not in ('desktop','lock'):self.window_frame(mode)
             if mode!='lock':self.os_shell(mode)
+            self.reflow(self.modal,self.canvas_width/1280)
         if not getattr(self,'mirror',False) and hasattr(self.app,'desktops'):
             if self.app.active_terminal and mode in OS_MODES:
                 self.app.job.desktops[self.app.active_terminal]=mode
@@ -48,12 +56,14 @@ class Interface(DesktopUI,BaseInterface):
         self.label(self.modal,'Starting funds: $400',790,668,18,GOLD)
     def ticket(self):
         a=self.app;j=a.job;waiting=a.customers.at_counter
+        if builds.is_build(j) and j.stage=='offered':self.build_interview();return
         self.rect(self.modal,0,0,1280,800,(.025,.05,.06,.86));self.rect(self.modal,160,95,1120,710,BG)
         self.label(self.modal,f'SERVICE REQUEST / {j.number:03d}',200,160,17,CYAN,mono=True)
         self.label(self.modal,j.customer,200,225,40,LIGHT)
         self.label(self.modal,j.title.upper(),200,270,20,GOLD)
         self.label(self.modal,j.complaint,200,325,23,LIGHT,width=780)
-        self.label(self.modal,'Diagnose first. Fit compatible hardware. Verify, store and hand back.',200,450,19,MUTED,width=790)
+        self.label(self.modal,'Fit each component, apply paste, connect cables, close the case and run the final test.' if builds.is_build(j) else 'Diagnose first. Fit compatible hardware. Verify, store and hand back.',200,450,19,MUTED,width=790)
+        if j.stage=='offered':self.button('build_requests','Custom build requests',520,625,325,lambda:a.open_mode('build_orders'))
         self.label(self.modal,f'Payment at collection: ${j.reward}',200,510,23,CYAN)
         self.label(self.modal,'Customer waiting at reception.' if waiting else 'Customer is walking to reception. You can explore while they arrive.',200,560,17,MUTED,width=800)
         self.button('accept','ACCEPT REQUEST' if j.stage=='offered' else 'RETURN TO WORK',200,625,280,a.accept_job if j.stage=='offered' else a.close_mode,j.stage!='offered' or waiting,True)
@@ -111,8 +121,8 @@ class Interface(DesktopUI,BaseInterface):
         self.label(self.modal,'System verification / connected customer computer',62,108,17,ink)
         self.label(self.modal,f'{j.customer} / service #{j.number:03d}',155,235,27,ink)
         for i,cat in enumerate(('CPU','GPU','RAM','Storage')):
-            key=j.part_for(cat);value=PARTS[key]['name'] if key and j.detected(cat) else 'NOT DETECTED'
-            if cat=='RAM' and key and j.detected(cat):value=f"{PARTS[key]['capacity']} GB DDR{PARTS[key]['ddr']}"
+            key=j.part_for(cat);value=PARTS[key]['name'] if key and j.detected(cat) else 'Integrated graphics' if cat=='GPU' and builds.integrated(j.hardware.get('CPU')) else 'NOT DETECTED'
+            if cat=='RAM' and key and j.detected(cat):value=f"{__import__('pcshop.assembly',fromlist=['total_ram']).total_ram(j):g} GB DDR{PARTS[key]['ddr']}"
             self.label(self.modal,cat,155,314+i*36,16,ink)
             self.label(self.modal,value,365,314+i*36,14,ink,width=270)
         self.soft(650,275,474,182,(.86,.91,.98,1))
@@ -169,16 +179,18 @@ class Interface(DesktopUI,BaseInterface):
         self.rect(self.modal,0,0,1280,800,BG);self.header('DELIVERY / UNPACK','Check the branded retail package and its contents before adding it to stock')
         if not items:
             self.label(self.modal,'All delivered parts have been unpacked.',100,200,26,LIGHT);return
-        a.delivery_index=getattr(a,'delivery_index',0)%len(items);key,qty=items[a.delivery_index];p=PARTS[key]
+        a.delivery_index=0;key,qty=items[0];a.delivery_key=key;p=PARTS[key]
         self.product_view=ProductView(self,key,opened=True)
-        self.label(self.modal,f'{qty} x '+p['name'],890,180,24,LIGHT,width=325)
+        self.label(self.modal,'1 box / '+p['name'],890,180,24,LIGHT,width=325)
         self.label(self.modal,p['spec'],890,290,19,CYAN,width=325)
-        self.label(self.modal,'Your courier is holding this shipment. Check the products, then collect the package to transfer its contents to workshop stock.',890,375,18,MUTED,width=325)
-        self.label(self.modal,f'Product {a.delivery_index+1} / {len(items)}',80,690,18,CYAN)
-        self.button('next_package','NEXT PRODUCT',80,720,230,a.next_package,len(items)>1)
+        self.label(self.modal,'Each retail unit has its own box. Collect this one; the courier returns to the van for the next. A RAM kit is one box containing its DIMMs.',890,375,18,MUTED,width=325)
+        self.label(self.modal,f'{sum(n for k,n in items)} boxes remaining',80,690,18,CYAN)
+        self.button('next_package','NEXT PRODUCT',80,720,230,a.next_package,False)
         self.button('turn_package','ROTATE',330,720,160,lambda:self.product_view.turn(30))
         self.button('unpack','COLLECT PACKAGE',890,650,320,a.unpack_delivery,True,True)
     def shop(self):StoreUI.shop(self)
+    def scroll_market(self,pixels):StoreUI.scroll_market(self,pixels)
+    def market_scrolled(self):StoreUI.market_scrolled(self)
     def checkout(self):StoreUI.checkout(self)
     def product_page(self):StoreUI.product_page(self)
     def receipt(self):StoreUI.receipt(self)
@@ -194,7 +206,7 @@ class Interface(DesktopUI,BaseInterface):
             self.label(self.modal,f"{qty} x {p['name']}",70,y+26,19,LIGHT)
             self.button('inspect_'+key,'INSPECT',620,y,135,lambda k=key:a.inspect_product(k,'inventory'))
             self.button('store_'+key,'STORE',765,y,100,lambda k=key:a.store_stock(k),p['category'] in SERVICEABLE and not p['faulty'] and len(j.stored_parts)<60)
-            self.button('return_'+key,f"RETURN / ${p['price']}",870,y,315,lambda k=key:a.return_stock(k),p['price']>0)
+            self.button('return_'+key,f"RETURN / ${a.job.unit_price(key)}",870,y,315,lambda k=key:a.return_stock(k),p['price']>0)
         if not items:self.label(self.modal,'Take parts from the racks, or order from PARTLINE and collect the rear delivery.',70,180,23,MUTED,width=1100)
         self.button('stockprev','<',70,690,70,lambda:a.page_inventory(-1),a.inventory_page>0)
         self.button('stocknext','>',155,690,70,lambda:a.page_inventory(1),(a.inventory_page+1)*8<len(items))

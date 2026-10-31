@@ -1,5 +1,5 @@
 """Five physical racks backed by persisted stock, not display-only samples."""
-from .hardware_visuals import packaging,product
+from .hardware_visuals import packaging
 RACKS=((.10,6.98,0),(2.45,6.98,0),(-5.6,6.98,0),(1.05,.12,180),(4.0,.12,180))
 class PartsStorage:
     def __init__(self,app):
@@ -14,7 +14,7 @@ class PartsStorage:
                     b.box(rack,'rubber foot',(xx,yy,.025),(.12,.12,.05),(.07,.08,.08,1))
                     for z in range(12):b.box(rack,'fixing hole',(xx,yy-.03,.18+z*.15),(.014,.004,.025),(.06,.07,.08,1))
             for z in (.16,.64,1.12,1.60):
-                b.box(rack,'laminated shelf',(0,0,z),(2.14,.80,.055),(.44,.35,.25,1),'wood')
+                b.box(rack,'laminated shelf',(0,0,z),(2.14,.80,.055),(.70,.65,.56,1),'wood')
                 for yy in (-.40,.40):b.box(rack,'steel shelf edge',(0,yy,z-.035),(2.15,.035,.08),(.17,.21,.23,1))
                 for xx in (-.71,0,.71):
                     self.slots.append((rack,xx,z+.03))
@@ -34,9 +34,7 @@ class PartsStorage:
         self.items=[]
         for index,key in enumerate(signature):
             rack,x,z=self.slots[index];holder=rack.attachNewNode('stock '+key);holder.setPos(x,0,z);self.items.append(holder)
-            # Box plus exposed component depict ONE owned unit.
-            pack=packaging(self.app.builder,holder,key);pack.setScale(.72);pack.setY(.10)
+            # One closed retail package per owned unit; no exposed duplicate part.
+            pack=packaging(self.app.builder,holder,key);pack.setScale(.90);pack.setY(-.04)
             lo,hi=pack.getTightBounds(holder);pack.setZ(-lo.z)
-            part=product(self.app.builder,holder,key);part.setScale(.78);part.setHpr(0,-25,0)
-            lo,hi=part.getTightBounds(holder);part.setPos(.04,-.18,-lo.z+.012)
             self.app.interaction.box(holder,'stored_part:'+str(index),(0,-.47,.19),(.60,.10,.39))

@@ -1,0 +1,20 @@
+PASS At least five additions in every non-GPU category
+PASS At least 25 additional graphics cards
+PASS RTX 30 series offered
+PASS RTX 40 series offered
+PASS RTX 50 series offered
+PASS All 122 additions have attributed price/specs, readable photos and matching retail cartons
+PASS Reject wrong CPU socket on AM5
+PASS Reject DDR4 in AM5 DDR5 board
+PASS DDR5 kit installs as two separate 16 GB sticks on AM5
+PASS All motherboard M.2 slots accept independent drives on AM5
+PASS Complete AM5 DDR5 build passes validation
+PASS 550 W PSU rejected for RTX 5090
+PASS New platform parts survive save/reload
+PASS Reject wrong CPU socket on LGA1700
+PASS Reject DDR4 in LGA1700 DDR5 board
+PASS DDR5 kit installs as two separate 16 GB sticks on LGA1700
+PASS All motherboard M.2 slots accept independent drives on LGA1700
+PASS Complete LGA1700 DDR5 build passes validation
+PASS 550 W PSU rejected for RTX 5090
+PASS New platform parts survive save/reload

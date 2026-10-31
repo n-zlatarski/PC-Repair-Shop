@@ -17,6 +17,8 @@ def advance(job,dt,paused=False):
         phase=c['phase'];step=min(dt,max(0,DURATIONS[phase]-c['elapsed']))
         c['elapsed']+=step;dt-=step
         if c['elapsed']+1e-7<DURATIONS[phase]:break
+        if phase=='to_cargo' and c.pop('more_packages',False):
+            c.update(phase='load',elapsed=0.);continue
         if phase=='depart':
             c.update(phase='idle',elapsed=0.)
             batch=[p for p in job.pending if p['status']=='queued' and p['remaining']<=0]

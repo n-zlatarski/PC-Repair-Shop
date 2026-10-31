@@ -2,7 +2,7 @@
 import math
 from panda3d.core import Vec3,BitMask32
 SKINS=[(.61,.43,.33,1),(.35,.24,.19,1),(.76,.58,.45,1),(.49,.34,.26,1)]
-CLOTHES=[(.19,.27,.29,1),(.34,.24,.18,1),(.22,.24,.31,1),(.36,.34,.27,1),(.23,.29,.22,1),(.34,.22,.25,1)]
+CLOTHES=[(.16,.23,.25,1),(.40,.27,.17,1),(.20,.26,.35,1),(.50,.45,.33,1),(.24,.31,.22,1),(.39,.23,.22,1)]
 
 def build_resident(person):
     app=person.app;i=person.index;b=app.builder
@@ -37,11 +37,12 @@ def build_resident(person):
         b.lines(body,'fabric fold',[garment_point(side*x,z) for x,z in ((.06,1.02),(.09,1.035),(.12,1.045))],tuple(c*.82 for c in shirt[:3])+(1,),1)
         b.lines(body,'chest seam',[garment_point(side*x,1.29) for x in (.055,.085,.115,.14)],tuple(c*.8 for c in shirt[:3])+(1,),1)
     b.cylinder(body,'neck',(0,0,1.48),(.092,.096,.14),skin,'skin')
-    from .character_mesh import head
+    from .human_head import head
     head(b,body,i,skin,hair)
     # Collar, zip/seam and pockets sit on the garment surface.
     for side in (-1,1):
-        n=b.ellipsoid(body,'folded collar',(side*.06,-.060,1.425),(.105,.028,.045),tuple(c*.75 for c in shirt[:3])+(1,),'fabric');n.setR(side*23)
+        from .geometry import mesh
+        n=body.attachNewNode(mesh('folded shirt collar',[[(side*.012,-.055,1.444),(side*.071,-.063,1.427),(side*.075,-.084,1.393),(side*.035,-.092,1.405)]]));n.setColor(*(tuple(c*.83 for c in shirt[:3])+(1,)));n.setTwoSided(True);b.surface(n,'fabric')
     b.lines(body,'jacket zip',[garment_point(0,z) for z in (.96,1.03,1.10,1.19,1.29,1.36,1.40,1.43)],(.32,.32,.29,1),1.2)
     for side in (-1,1):b.lines(body,'pocket seam',[garment_point(side*x,z) for x,z in ((.07,1.05),(.09,1.03),(.12,1.00))],(.10,.13,.13,1),1.5)
     if i%3==1:
@@ -88,16 +89,29 @@ def build_resident(person):
         b.ellipsoid(body,'canvas backpack',(0,.145,1.21),(.28,.15,.38),(.23,.20,.16,1),'fabric')
         for x in (-.13,.13):b.lines(body,'backpack strap',[garment_point(x,z,.007) for z in (1.35,1.29,1.19,1.10,1.03)],(.10,.10,.09,1),5).hide(BitMask32.bit(3))
     from .performance import batch_joint_geometry
+    batch_joint_geometry(body)
     for joint in person.legs+person.knees+person.arms+person.elbows:batch_joint_geometry(joint)
     person.parcel=body.attachNewNode('carried PC')
     b.box(person.parcel,'customer tower',(0,-.28,1.01),(.32,.27,.42),(.16,.18,.19,1),'metal')
     b.box(person.parcel,'tower vent',(0,-.418,1.01),(.24,.006,.27),(.055,.065,.07,1),'rubber')
     for z in (.9,.93,.96,.99,1.02,1.05,1.08):b.lines(person.parcel,'vent slit',[(-.1,-.422,z),(.1,-.422,z)],(.13,.16,.16,1),1)
     person.parcel.hide();b.shadow(person.root,(0,0,.012),(.66,.48),.7)
+    from panda3d.core import LODNode,BoundingSphere,Point3
+    lod=person.root.attachNewNode(LODNode('resident distance detail'));lod.node().setCenter((0,0,.85))
+    lod.node().setBounds(BoundingSphere(Point3(0,0,.9),1.4));lod.node().setFinal(True)
+    person.body.reparentTo(lod);lod.node().addSwitch(38,0)
+    distant=lod.attachNewNode('distant resident silhouette');distant.setScale(person.scale)
+    b.ellipsoid(distant,'distant head',(0,0,1.61),(.20,.19,.26),skin);b.ellipsoid(distant,'distant hair',(0,.012,1.70),(.21,.19,.11),hair);b.ellipsoid(distant,'distant shirt',(0,0,1.19),(.40*build,.25,.56),shirt)
+    person.low_legs=[]
+    for side in (-1,1):
+        leg=distant.attachNewNode('distant leg');leg.setPos(side*.09,0,.87);b.box(leg,'trousers',(0,0,-.39),(.13,.14,.78),denim);person.low_legs.append(leg);b.box(distant,'distant arm',(side*.24,0,1.16),(.095,.12,.50),shirt)
+    batch_joint_geometry(distant);lod.node().addSwitch(220,38)
+
 
 def animate_resident(person,moving,dt):
     if moving:person.phase+=dt*(5.0 if not person.parcel.isHidden() else 5.6)
     phase=person.phase
+    for i,leg in enumerate(getattr(person,'low_legs',[])):leg.setP(math.sin(phase+i*math.pi)*19 if moving else 0)
     carrying=not person.parcel.isHidden()
     person.torso.setP(0)
     for i,(leg,knee) in enumerate(zip(person.legs,person.knees)):

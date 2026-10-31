@@ -9,6 +9,7 @@ FONT=Path(__file__).resolve().parents[1]/'assets'/'Interface.ttf'
 def font(s):return ImageFont.truetype(str(FONT),s)
 for key,p in PARTS.items():
  if p.get('faulty'):continue
+ if len(sys.argv)>1 and key not in sys.argv[1:]:continue
  cat=p['category'];w,h=768,512
  im=Image.new('RGB',(w,h),'#17191d');d=ImageDraw.Draw(im)
  def text(t,x,y,size=32,c='white'):d.text((x,y),t,font=font(size),fill=c)
@@ -110,6 +111,9 @@ for key,p in PARTS.items():
   text(brand,35,25,62,'#28231d');fit(p['name'].replace(brand,'').strip(),35,111,70,'#28231d')
   d.rectangle((500,211,685,450),outline='#3e3426',width=5);d.rectangle((520,233,666,431),outline='#3e3426',width=3)
   text('ATX MID-TOWER',35,330,35,'#28231d');text('HANDLE WITH CARE',35,438,23,'#28231d')
+ if p.get('finish')=='White':
+  box_region=im.crop((85,210,700,385));mask=box_region.convert('L').point(lambda v: 255 if 32<=v<=65 else 0);box_region.paste((223,229,234),mask=mask);im.paste(box_region,(85,210))
+  d=ImageDraw.Draw(im);d.rounded_rectangle((530,22,743,72),radius=10,fill='#eef3f7');d.text((548,30),'WHITE',font=font(30),fill='#202b35')
  im.save(ROOT/(key+'_front.png'))
  # Readable side/end panel and specifications on the reverse of each carton.
  side=Image.new('RGB',(256,512),'#252a32');d=ImageDraw.Draw(side)

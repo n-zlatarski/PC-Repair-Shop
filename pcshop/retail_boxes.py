@@ -27,7 +27,7 @@ def packaging(b,parent,key,opened=False):
     # Fold seams, opening tab and a tamper seal add readable construction.
     for z in (-h/2+.004,h/2-.004):b.box(n,'carton fold',(0,-d/2-.0015,z),(w*.98,.001,.002),(.10,.11,.12,1))
     seal=b.box(n,'tamper seal',(0,-d/2-.002,h*.44),(.035,.002,.029),(.80,.82,.80,1));seal.setTextureOff(1)
-    if cat=='RAM':
+    if cat=='RAM' and opened:
         # The retail insert remains behind a real DIMM in a moulded transparent tray.
         part=product(b,n,source);part.setR(-90);part.setScale(.96);part.setPos(0,-d*.95,-.006)
         shell=b.box(n,'clear PET clamshell',(0,-d*.92,0),(w*1.03,.055,h*.75),(.65,.80,.87,.14))

@@ -40,8 +40,17 @@ class ServiceControls:
         self.ghost=None;self.sync();self.tools=RepairTools(self)
     def sync(self):
         j=self.app.job;opened=j.panel_open
+        from .assembly import nvme,ensure,M2_POS
+        drive=j.hardware.get('Storage');is_nvme=nvme(drive)
+        mount=next((n for n,k in ensure(j)['drives'].items() if k==drive),'Storage')
+        drive_pos=M2_POS.get(mount,CENTERS['Storage'])
+        screw_pos=(drive_pos[0]-.075,-.06,drive_pos[2]) if is_nvme else HOTSPOTS['Storage screw']
+        self.markers['Storage screw'].setPos(*screw_pos)
+        self.targets['Storage screw'].setPos(Vec3(*screw_pos)-Vec3(*HOTSPOTS['Storage screw']))
+        self.app.pc.colliders['Storage'].setPos(Vec3(*drive_pos)-Vec3(*CENTERS['Storage']))
         for name,target in self.targets.items():
             visible=(name in ('Power',) or (name.startswith('Screw') or name=='Panel') and not opened or name=='PanelDock' and opened or name not in ('Power','Screw0','Screw1','Panel','PanelDock') and opened)
+            if is_nvme and name in ('SATA data','SATA power'):visible=False
             target.node().setIntoCollideMask(PART if visible else BitMask32.allOff())
             if name in self.markers:
                 self.markers[name].show() if visible else self.markers[name].hide()
@@ -64,11 +73,14 @@ class ServiceControls:
                     'SATA data':[(.19,.15,.22),(.22,-.01,.21),(.10,-.06,.15)],
                     'SATA power':[(-.01,-.1,.14),(.10,-.13,.14),(.18,-.06,.15)]}
             for cable,points in routes.items():
+                if is_nvme and cable.startswith('SATA'):continue
                 if not j.cables[cable]:
                     end=points[-1];points[-1]=(end[0],end[1]-.05,end[2]-.055)
                 self.app.builder.lines(self.wires,cable+' lead',points,(.16,.65,.65,1) if cable=='SATA data' else (.57,.38,.20,1),3)
         for node in self.app.pc.colliders.values():node.node().setIntoCollideMask(PART if opened else BitMask32.allOff())
         if hasattr(self,'tools'):self.tools.sync()
+        from .builds import is_build
+        self.root.hide() if is_build(j) else self.root.show()
     def bolt_pose(self,name,loosened):
         bolt=self.bolts[name];bolt.setR(-loosened*1080);bolt.setY(-loosened*.027)
     def bolt_loose(self,name):
@@ -91,6 +103,7 @@ class ServiceControls:
         if name in SERVICEABLE:return 'DRAG '+name.upper()+' TO THE PARTS TRAY'
         return 'RIGHT DRAG: ORBIT   /   WHEEL: ZOOM'
     def down(self):
+        if self.app.mode=='buildbench':return self.app.assembly_controls.down()
         a=self.app
         if a.mode!='repair' or not a.mouse_in_model_area() or self.drag:return
         name=self.hit()
@@ -133,6 +146,7 @@ class ServiceControls:
             a.sync_pc();a.save();a.ui.show('repair')
         except RuleError as e:self.reset_bolts();a.ui.toast(str(e))
     def up(self):
+        if self.app.mode=='buildbench':return self.app.assembly_controls.up()
         a=self.app;self.hold=None;self.reset_bolts();self.tools.cancel()
         if not self.drag:return
         drag=self.drag;self.drag=None
@@ -152,19 +166,26 @@ class ServiceControls:
                 if 979<x<1267 and 152<y<660:a.job.remove_part(drag['name'])
                 else:a.ui.toast('Drop the part inside the parts tray on the right.')
             else:
-                center=a.render.getRelativePoint(a.pc.root,Point3(*CENTERS[drag['name']]))
-                screen=Point2();a.camLens.project(a.camera.getRelativePoint(a.render,center),screen)
-                if (m-screen).length()<.14:a.job.install_part(drag['key'],drag['name'])
-                else:a.ui.toast('Drop on the matching hardware slot inside the case.')
+                from .assembly import targets
+                options=targets(a.job,'Storage',drag['key']) if drag['name']=='Storage' else [(drag['name'],CENTERS[drag['name']])]
+                best=None;distance=.065 if drag['name']=='Storage' else .14
+                for target,pos in options:
+                    center=a.render.getRelativePoint(a.pc.root,Point3(*pos));screen=Point2()
+                    if a.camLens.project(a.camera.getRelativePoint(a.render,center),screen) and (m-screen).length()<distance:best=target;distance=(m-screen).length()
+                if best:a.job.install_part(drag['key'],drag['name'],best)
+                else:a.ui.toast('Drop on the matching hardware socket inside the case.')
             a.result=None;a.sync_pc();a.save();a.ui.show('repair')
         except RuleError as e:a.ui.toast(str(e))
         finally:
             if self.ghost:self.ghost.removeNode();self.ghost=None
     def cancel(self):
+        if hasattr(self.app,'assembly_controls'):self.app.assembly_controls.cancel()
         self.hold=None;self.drag=None;self.orbit=False;self.reset_bolts();self.tools.cancel()
         if self.ghost:self.ghost.removeNode();self.ghost=None
     def update(self,dt):
-        a=self.app;self.tools.update(dt)
+        a=self.app
+        if a.mode=='buildbench':a.assembly_controls.update(dt)
+        else:self.tools.update(dt)
         if self.hold:
             if self.hit()!=self.hold['name']:self.hold=None;self.reset_bolts();self.tools.stop_visual()
             else:
@@ -185,4 +206,4 @@ class ServiceControls:
             if self.orbit and self.last:
                 delta=m-self.last;self.yaw=max(-65,min(65,self.yaw+delta.x*120));self.pitch=max(-20,min(25,self.pitch+delta.y*70));a.update_camera()
             self.last=m
-        if getattr(a.ui,'repair_hint',None):a.ui.repair_hint.node().setText(self.hint())
+        if a.mode=='repair' and getattr(a.ui,'repair_hint',None):a.ui.repair_hint.node().setText(self.hint())

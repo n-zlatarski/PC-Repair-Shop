@@ -1,5 +1,5 @@
 """Two persistent simulated desktops, visible monitor textures and local live CCTV."""
-from panda3d.core import NodePath,OrthographicLens,PerspectiveLens,CardMaker,BitMask32,Texture
+from panda3d.core import NodePath,OrthographicLens,PerspectiveLens,CardMaker,BitMask32,Texture,TextureStage
 from .shop_equipment import CAMERAS
 OS_MODES={'desktop','browser','shop','guide','network','security','diagnostic','checkout','inventory','files','settings','report','lock','product_page','receipt'}
 
@@ -40,12 +40,12 @@ class MonitorSurface:
         from .workshop_ui import Interface
         self.app=app;self.station=station;self.mode='desktop';self.frames=2
         self.scene=NodePath(station+' desktop texture scene')
-        self.buffer=app.win.makeTextureBuffer(station+' desktop',1024,640)
+        self.buffer=app.win.makeTextureBuffer(station+' desktop',1920,1080)
         self.buffer.setClearColor((.03,.08,.12,1));texture=self.buffer.getTexture()
-        texture.setMinfilter(Texture.FTLinear);texture.setMagfilter(Texture.FTLinear)
+        texture.setMinfilter(Texture.FTLinear);texture.setMagfilter(Texture.FTLinear);texture.setAnisotropicDegree(16)
         self.camera=app.makeCamera(self.buffer,scene=self.scene);self.camera.reparentTo(self.scene)
-        lens=OrthographicLens();lens.setFilmSize(1280,800);lens.setNearFar(1,4000);self.camera.node().setLens(lens)
-        self.camera.setPos(640,-2000,-400);self.camera.lookAt(640,0,-400)
+        lens=OrthographicLens();lens.setFilmSize(800*16/9,800);lens.setNearFar(1,4000);self.camera.node().setLens(lens)
+        self.camera.setPos(400*16/9,-2000,-400);self.camera.lookAt(400*16/9,0,-400)
         # Same UI painter as the controllable desktop, detached from the mouse's
         # PGTop. Offscreen buttons cannot receive mouse input or buy anything.
         ui=Interface.__new__(Interface);ui.app=app;ui.font=app.ui.font;ui.mono=app.ui.mono
@@ -55,7 +55,7 @@ class MonitorSurface:
         ui.widgets=[];ui.buttons={};ui.order=0;ui.modal_order=1000;ui.toast_order=10000;ui.product_view=None
         ui.toast_node=ui.root.attachNewNode('unused notifications');ui.toast_until=0
         self.ui=ui
-        cm=CardMaker(station+' live display');cm.setFrame(-.306,.306,-.169,.169)
+        cm=CardMaker(station+' live display');cm.setFrame(-.306,.306,-.172125,.172125)
         self.card=app.render.attachNewNode(cm.generate());self.card.setPos(*pos);self.card.setH(heading)
         self.card.setTexture(texture);self.card.setLightOff(1);self.card.setShaderOff(1)
         self.card.hide(BitMask32.bit(3));self.card.hide(BitMask32.bit(6))
@@ -63,5 +63,7 @@ class MonitorSurface:
         self.mode=mode if mode in OS_MODES else 'desktop';self.ui.show(self.mode)
         self.frames=2;self.buffer.setActive(True)
     def tick(self,watching):
+        texture=self.buffer.getTexture()
+        if texture.getXSize() and texture.getYSize():self.card.setTexScale(TextureStage.getDefault(),self.buffer.getXSize()/texture.getXSize(),self.buffer.getYSize()/texture.getYSize())
         active=self.frames>0 or (self.mode=='security' and watching) or (self.mode=='diagnostic' and self.app.testing)
         self.buffer.setActive(active);self.frames=max(0,self.frames-1)

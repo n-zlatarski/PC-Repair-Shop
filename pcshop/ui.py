@@ -3,18 +3,18 @@ from panda3d.core import TextNode, Filename, Point3
 from direct.gui.DirectGui import DirectFrame, DirectButton, DGG
 from .geometry import ASSETS
 from .model import PARTS
-BG=(.045,.075,.09,.97)
-PANEL=(.075,.12,.14,.97)
+BG=(.045,.065,.065,.96)
+PANEL=(.10,.14,.13,.97)
 LIGHT=(.90,.91,.85,1)
 MUTED=(.57,.68,.68,1)
-CYAN=(.22,.80,.77,1)
-GOLD=(.94,.72,.40,1)
-DARK=(.10,.17,.19,1)
+CYAN=(.65,.75,.60,1)
+GOLD=(.85,.67,.38,1)
+DARK=(.11,.16,.15,1)
 class Interface:
     def __init__(self,app):
         self.app=app
-        self.font=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Interface.ttf')).getFullpath()); self.font.setPixelsPerUnit(36)
-        self.mono=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Terminal.ttf')).getFullpath()); self.mono.setPixelsPerUnit(36)
+        self.font=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Interface.ttf')).getFullpath()).makeCopy(); self.font.setPixelsPerUnit(64)
+        self.mono=app.loader.loadFont(Filename.fromOsSpecific(str(ASSETS/'Terminal.ttf')).getFullpath()).makeCopy(); self.mono.setPixelsPerUnit(64)
         # aspect2d is a PGTop: GUI regions need it for actual mouse hit detection.
         self.root=app.aspect2d.attachNewNode('interface'); self.resize()
         self.desktop_backdrop=DirectFrame(parent=app.render2d,frameSize=(-1,1,-1,1),frameColor=(.025,.045,.09,1),relief=DGG.FLAT,state=DGG.DISABLED)
@@ -30,7 +30,7 @@ class Interface:
         self.rect(self.hud,24,690,840,775,BG)
         self.label(self.hud,'CUSTOMER SERVICE / NEXT STEP',42,713,11,CYAN,mono=True)
         self.objective=self.label(self.hud,'',42,741,18,LIGHT,width=765)
-        self.label(self.hud,'WASD  move   E  interact\nJ  ticket   ESC  menu',1002,735,13,LIGHT,mono=True)
+
         self.rect(self.hud,390,22,890,61,BG)
         self.queue_info=self.label(self.hud,'',640,48,14,CYAN,align=TextNode.ACenter)
         self.delivery_status=self.label(self.hud,'',640,83,13,CYAN,align=TextNode.ACenter)
@@ -42,9 +42,13 @@ class Interface:
         self.toast_node.hide(); self.toast_until=0
 
     def resize(self):
+        from .desktops import OS_MODES
+        wide=getattr(self,'_mode',None) in OS_MODES and (getattr(self,'mirror',False) or self.app.active_terminal)
+        self.canvas_width=800*16/9 if getattr(self,'mirror',False) else max(1280,800*self.app.getAspectRatio()) if wide else 1280
+        if getattr(self,'mirror',False):return
         aspect=self.app.getAspectRatio()
-        scale=min(2/800,2*aspect/1280)
-        self.root.setPos(-640*scale,0,400*scale);self.root.setScale(scale,1,scale)
+        scale=min(2/800,2*aspect/self.canvas_width)
+        self.root.setPos(-self.canvas_width/2*scale,0,400*scale);self.root.setScale(scale,1,scale)
 
     def mouse_to_design(self,x,y):
         p=self.root.getRelativePoint(self.app.render2d,Point3(x,0,y))
@@ -91,6 +95,11 @@ class Interface:
         for child in list(self.modal.getChildren()): child.removeNode()
 
     def update(self,now):
+        signature=(self.app.job.objective(),self.app.job.money,len(self.app.job.ready),len(self.app.job.pending),repr(self.app.job.courier))
+        if getattr(self,'hud_signature',None)==signature:
+            if now>self.toast_until:self.toast_node.hide()
+            return
+        self.hud_signature=signature
         self.objective.node().setText(self.app.job.objective())
         j=self.app.job
         self.queue_info.node().setText(f'COLLECTION {len(j.ready)}/3   |   DELIVERIES {len(j.pending)}')
@@ -135,7 +144,8 @@ class Interface:
         if a.result: self.set_result(*a.result)
 
     def test_progress(self,fraction):
-        self.progress['frameSize']=(155,155+970*min(1,fraction),-504,-487)
+        ratio=getattr(self.progress,'_wide_scale',1)
+        self.progress['frameSize']=(155*ratio,(155+970*min(1,fraction))*ratio,-504,-487)
         self.diag_title.node().setText('TEST IN PROGRESS')
         stages=['Enumerating CPU and graphics...','Writing memory test patterns...','Reading and checking memory...','Checking storage and summarising...']
         self.diag_detail.node().setText(stages[min(3,int(fraction*4))])
@@ -145,7 +155,8 @@ class Interface:
         self.diag_title.node().setText('PASS' if passed else 'FAIL / INVESTIGATE')
         self.diag_title.node().setTextColor(*((.05,.40,.29,1) if passed else (.68,.24,.12,1)))
         self.diag_detail.node().setText(detail); self.diag_status.node().setText(title)
-        self.progress['frameSize']=(155,1125,-504,-487)
+        ratio=getattr(self.progress,'_wide_scale',1)
+        self.progress['frameSize']=(155*ratio,1125*ratio,-504,-487)
 
     def pause(self):
         self.rect(self.modal,0,0,1280,800,(.025,.05,.06,.72)); self.rect(self.modal,430,160,850,640,BG)

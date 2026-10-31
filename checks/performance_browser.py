@@ -49,7 +49,7 @@ def install_checks(app,output):
         app.use_terminal('reception');yield from wait(5)
         check(not app.cam.node().isActive() and all(not b.isActive() for b in app.graphics.manager.buffers),'Desktop suspends world render')
         yield from click('app_browser');yield from click('visit_parts');capture('store_1080p')
-        check(sum(p['price']>0 for p in PARTS.values())==68,'68 purchasable products')
+        check(sum(p['price']>0 for p in PARTS.values())==69,'69 purchasable products')
         for cat in CATEGORIES[1:]:
             brands={p['manufacturer'] for p in PARTS.values() if p['price']>0 and p['category']==cat}
             check(len(brands)>=(2 if cat=='CPU' else 4),'Multiple brands: '+cat)

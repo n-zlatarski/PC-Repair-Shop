@@ -1,0 +1,24 @@
+PASS Native 1920 x 1080 render surface
+PASS Expanded district bounds retained
+PASS New outer roads are walkable
+PASS Eight cars and four cyclists restored
+PASS Passing traffic moves
+PASS Traffic yields to player
+PASS Traffic collision retained
+PASS Cyclist translation and crank animation restored
+PASS Cyclist yields to player
+PASS Detailed head asset loads
+PASS All traffic cars have four animated wheels
+PASS Carried PC hand contact -1
+PASS Carried PC hand contact 1
+PASS Other-address packages retained
+PASS Whole-order quantities retained
+PASS NVMe installs into the available B560 M.2 socket
+PASS Four-slot motherboard behavior retained
+PASS Large four-card marketplace layout retained
+PASS Shadow buffer stays active over 100 consecutive frames
+PASS Workshop temporal pixel variation 0
+PASS Interior shadow anchor retained
+PASS Marked menu photograph remains removed
+PASS Menu suspends world render
+PASS Shadows resume from menu

@@ -1,0 +1,15 @@
+{
+  "new_parts": 122,
+  "new_categories": {
+    "GPU": 29,
+    "CPU": 17,
+    "Motherboard": 15,
+    "RAM": 11,
+    "Storage": 13,
+    "PSU": 11,
+    "Fan": 9,
+    "Case": 9,
+    "Cooler": 8
+  },
+  "retail_total": 207
+}

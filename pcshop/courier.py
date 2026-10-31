@@ -82,12 +82,14 @@ class Courier:
                 hub=b.cylinder(axle,'wheel hub',(x*.12,0,0),(.37,.37,.025),(.42,.45,.46,1),'metal');hub.setR(90)
                 for a in range(5):b.box(axle,'wheel spoke',(x*.14,math.cos(a*math.tau/5)*.12,math.sin(a*math.tau/5)*.12),(.03,.035,.035),ivory)
                 self.wheels.append(axle)
+        from .van_detail import refine
+        refine(self,b)
         b.shadow(r,(0,0,.015),(2.5,5.0),.8)
         self.obstacle=[0,0,0,0];app.workshop.dynamic_obstacles=[self.obstacle]
         self.blocker=app.interaction.box(self.root,'blocker',(0,-.10,1.02),(2.05,4.55,2.02))
         from .performance import batch_joint_geometry
         batch_joint_geometry(self.root,exclude=self.reverse_lamps)
-        self.last_phase=None;self.sync(0)
+        self.last_phase=None;self.shipment_signature=None;self.sync(0)
     def blocked(self):
         c=self.app.job.courier;phase=c['phase'];p=self.app.player
         if phase in ('approach','reverse','depart'):
@@ -103,6 +105,19 @@ class Courier:
         return False
     def sync(self,dt):
         c=self.app.job.courier;phase=c['phase'];t=min(1,c['elapsed']/DURATIONS.get(phase,1));a=self.app
+        waiting=[(k,n) for order in a.job.pending if order.get('status') in ('on_route','waiting') for k,n in order['items'].items()]
+        carrying=phase in ('to_handover','waiting') or phase=='load' and t>=.5
+        signature=(tuple(waiting),carrying)
+        if signature!=self.shipment_signature:
+            from .shipping_cartons import carton
+            self.shipment_signature=signature;self.cargo_package.node().removeAllChildren();self.package.node().removeAllChildren()
+            orders=[o for o in a.job.pending if o.get('status') in ('on_route','waiting')]
+            for i,address in enumerate(('14 MAPLE ST','28 RIVER RD','6 OAK AVE','31 HILL ST','19 PARK RD','8 CEDAR ST')):
+                carton(a.builder,self.cargo_package,address,(.48,.43,.32),(-.52+(i%2)*1.02,-.25+(i//2)*.48,.71))
+            for i,order in enumerate(orders[1:] if carrying else orders):
+                carton(a.builder,self.cargo_package,'PC WORKSHOP',(.72,.54,.45),(-.40+(i%2)*.82,1.45,.78+(i//2)*.47))
+            if orders:
+                carton(a.builder,self.package,'PC WORKSHOP',(.72,.54,.45),(0,-.36,1.03),sum(orders[0]['items'].values()))
         active=phase!='idle'
         self.root.show() if active else self.root.hide()
         self.driver.root.show() if active else self.driver.root.hide()
@@ -123,11 +138,11 @@ class Courier:
         angle=105*t if phase=='cargo_open' else 105*(1-t) if phase=='cargo_close' else 105 if phase in ('load','to_handover','waiting','handover','to_cargo') else 0
         for side,door in self.cargo_doors:door.setH(-side*angle)
         loaded=phase in ('approach','reverse','door_open','exit','walk','cargo_open') or phase=='load' and t<.5
-        self.cargo_package.show() if loaded else self.cargo_package.hide()
+        self.cargo_package.show()
         seat=a.render.getRelativePoint(self.root,Vec3(.47,-1.02,.13))
         step=a.render.getRelativePoint(self.root,Vec3(1.50,-1.10,0))
         route=[step,Vec3(-3.50,11.35,0),Vec3(-3.50,10.70,0),CARGO]
-        handroute=[CARGO,Vec3(-.35,10.70,0),HANDOVER]
+        handroute=[CARGO,HANDOVER]
         seated=phase in ('approach','reverse','door_open','door_close','depart')
         self.driver_direction=Vec3(0,1,0)
         if seated:pos=seat

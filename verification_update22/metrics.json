@@ -1,0 +1,15 @@
+{
+  "checks": 65,
+  "products": 207,
+  "categories": {
+    "RAM": 23,
+    "GPU": 41,
+    "Storage": 27,
+    "CPU": 29,
+    "Motherboard": 24,
+    "PSU": 17,
+    "Cooler": 13,
+    "Fan": 16,
+    "Case": 17
+  }
+}

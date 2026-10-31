@@ -1,12 +1,39 @@
 """Windows 11-inspired simulated shell; all applications remain inside the game."""
 from datetime import datetime
 from panda3d.core import TextNode,Point3,Filename,TransparencyAttrib
-from direct.gui.DirectGui import DirectFrame,DirectButton,DirectEntry,DGG
+from direct.gui.DirectGui import DirectFrame,DirectButton,DirectEntry,DirectScrolledFrame,DGG
 from .geometry import ASSETS
 
 INK=(.10,.13,.19,1);BLUE=(.04,.36,.79,1);WHITE=(.97,.98,1,1)
 APP_NAMES={'product_page':'Partline - Product','receipt':'Partline - Orders','desktop':'Desktop','browser':'Web Browser','shop':'Partline - PC parts','checkout':'Partline - Checkout','guide':'Hardware Guide','network':'Network settings','security':'Camera Viewer','diagnostic':'Hardware Lab','inventory':'Workshop Stock','files':'File Explorer','settings':'Settings','report':'Diagnostic report'}
 class WindowsShell:
+    def reflow(self,parent,ratio):
+        """Widen positions and layout bounds, preserving glyph/image proportions."""
+        widgets={w.getKey():w for w in self.widgets}
+        for node in list(parent.getChildren()):
+            node.setX(node.getX()*ratio)
+            if node.getName()=='application content':self.reflow(node,ratio);continue
+            widget=widgets.get(node.getKey())
+            if widget is not None:
+                widget._wide_scale=getattr(widget,"_wide_scale",1)*ratio
+                if isinstance(widget,DirectEntry):widget['width']=widget['width']*ratio;continue
+                bounds=widget['frameSize']
+                if bounds is None:continue
+                l,r,b,t=bounds;texture=widget['frameTexture']
+                image=texture is not None and 'rounded' not in texture.getName() and 'wallpaper' not in texture.getName()
+                if image:
+                    mid=(l+r)/2*ratio;widget['frameSize']=(mid-(r-l)/2,mid+(r-l)/2,b,t)
+                else:widget['frameSize']=(l*ratio,r*ratio,b,t)
+                if isinstance(widget,DirectScrolledFrame):
+                    l,r,b,t=widget['canvasSize'];widget['canvasSize']=(l*ratio,r*ratio,b,t)
+                    for group in widget.getCanvas().getChildren():self.reflow(group,ratio)
+                if isinstance(widget,DirectButton):
+                    try:
+                        x,z=widget['text_pos'];widget['text_pos']=(x*ratio,z)
+                    except KeyError:pass # Photograph buttons have no text component.
+            elif isinstance(node.node(),TextNode):
+                wrap=node.node().getWordwrap()
+                if wrap>0:node.node().setWordwrap(wrap*ratio)
     def tex(self,name):
         cache=getattr(self.app,'shell_textures',None)
         if cache is None:self.app.shell_textures={};cache=self.app.shell_textures
@@ -25,7 +52,11 @@ class WindowsShell:
         b.setTransparency(TransparencyAttrib.MAlpha);self.layer(b,self.modal);self.widgets.append(b);self.buttons[key]=b;return b
     def wallpaper(self):
         variant=self.app.job.desktop_preferences.get(self.station_name(),'blue')
-        self.artwork('wallpaper_'+variant+'.png',0,0,1280,800)
+        frame=self.artwork('wallpaper_'+variant+'.png',0,0,1280,800)
+        from panda3d.core import TextureStage
+        texture=frame['frameTexture'];source=texture.getXSize()/texture.getYSize();target=self.canvas_width/800
+        if target>source:
+            scale=source/target;frame.setTexScale(TextureStage.getDefault(),1,scale);frame.setTexOffset(TextureStage.getDefault(),0,(1-scale)/2)
     def shell_apps(self):
         apps=['browser','files','security','inventory','network','settings']
         if self.station_name()=='diagnostic':apps.insert(1,'diagnostic')
@@ -46,7 +77,8 @@ class WindowsShell:
         for n in nodes:n.reparentTo(content)
         maximized=self.app.window_maximized.get(self.station_name(),False)
         x,y,w,h=(0,0,1280,756) if maximized else (40,38,1200,706)
-        content.setPos(x,0,-(y+39));content.setScale(w/1280,1,(h-39)/800)
+        content.setPos(x,0,-(y+39));scale=(h-39)/800;content.setScale(scale,1,scale)
+        self.reflow(content,w/(1280*scale))
         content.setBin('fixed',1010)
         # Background must draw before the app's existing fixed-bin children.
         old=self.modal_order;self.modal_order=900

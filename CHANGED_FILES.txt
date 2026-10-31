@@ -1,31 +1,17 @@
-Changes from delivered version 13.
-See verification/VALIDATION.md for current evidence.
+Version 20: CITY_LIFE_VISUAL_UPDATE.md describes the city expansion, revised models, traffic, cycling, shadow correction, validation and limitations.
+New: pcshop/human_head.py, cycling.py, van_detail.py; assets/people; assets/materials/pavement.png; checks/update20_city.py; verification_v20.
+Updated: avatars.py, vehicles.py, street_life.py, city.py, architecture.py, world.py, courier.py, geometry.py, art_direction.py, presentation.py, frontend.py, brick.png and documentation.
 
-ADDED GRAPHICS_FULLSCREEN_UPDATE.md
-UPDATED README.md
-UPDATED assets/materials/ceiling.png
-UPDATED assets/materials/concrete.png
-UPDATED assets/materials/metal.png
-UPDATED assets/materials/plaster.png
-UPDATED assets/materials/tile.png
-UPDATED assets/materials/wood.png
-ADDED checks/benchmark.py
-ADDED checks/display_graphics.py
-UPDATED checks/equipment.py
-UPDATED checks/performance_browser.py
-UPDATED checks/playthrough.py
-UPDATED checks/stock_rear.py
-UPDATED checks/visuals.py
-UPDATED checks/windows_tools.py
-UPDATED main.py
-UPDATED pcshop/app.py
-ADDED pcshop/display.py
-UPDATED pcshop/geometry.py
-UPDATED pcshop/held_stock.py
-UPDATED pcshop/parts_storage.py
-UPDATED pcshop/presentation.py
-UPDATED pcshop/service.py
-UPDATED pcshop/shop_layout.py
-UPDATED pcshop/ui.py
-UPDATED pcshop/workshop_ui.py
-UPDATED tools/make_materials.py
+Version 19: NVME_DELIVERY_GRAPHICS_UPDATE.md describes features, controls, validation and limitations.
+New: contact_shading.py, shipping_cartons.py, expanded_catalog.py, expanded_products.json, photo_bounds.json, nvme_deliveries.py, update19_visuals.py and verification_v19.
+Updated: storage state, assembly/repair controls, sockets, Partline images, delivery UI and routing, 1080p display, lighting, materials, workbench, fans, catalogue and packaging.
+
+Graphical makeover
+New: pcshop/art_direction.py, tools/build_visual_materials.py, checks/makeover_views.py, checks/makeover_regression.py, GRAPHICAL_MAKEOVER_UPDATE.md, verification_makeover.
+Updated: pcshop/app.py, geometry.py, presentation.py, shop_layout.py, parts_storage.py, held_stock.py, retail_boxes.py, hardware_visuals.py, vehicles.py, avatars.py, world.py, ui.py, frontend.py; surface textures and menu_workshop.jpg.
+Updated documentation: README.md, ART_ASSETS.md.
+
+Hands-on assembly update
+New: pcshop/assembly.py, assembly_controls.py, retail_catalog.py, assets/retail_catalog.json, assets/products, checks/assembly_*.py, HANDS_ON_ASSEMBLY_UPDATE.md
+Updated: builds.py, build_ui.py, model.py, catalog.py, scene.py, hardware_visuals.py, service.py, app.py, courier.py, store_ui.py, windows_shell.py, workshop_ui.py, ui.py and packaging for new products.
+Updated documentation: README.md, PRICE_REFERENCE.md, ART_ASSETS.md.

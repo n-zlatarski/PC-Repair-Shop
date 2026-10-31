@@ -10,7 +10,7 @@ def main():
     app=WorkshopApp(fresh=True);out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
     app.close_mode();app.capture_mouse(False);app.mode='photo';app.ui.show(None)
     analyzer=SceneGraphAnalyzer();analyzer.addNode(app.render.node())
-    report={'resolution':[1920,1080],'renderer':app.win.getGsg().getDriverRenderer(),
+    report={'vertical_fov':60,'resolution':[1920,1080],'renderer':app.win.getGsg().getDriverRenderer(),
             'triangles':analyzer.getNumTris(),'geoms':analyzer.getNumGeoms(),'poses':{}}
     poses={'reception':((-.6,-5.8,1.6),(-1.5,-3,1.4)),
            'workshop':((-5,3,1.6),(0,6.5,1.2)),
@@ -19,6 +19,10 @@ def main():
         for name,(pos,target) in poses.items():
             app.player=Vec3(*pos);app.camera.setPos(*pos);app.camera.lookAt(*target)
             for _ in range(12):app.taskMgr.step()
+            import math
+            vertical=60.;horizontal=math.degrees(2*math.atan(math.tan(math.radians(vertical/2))*app.win.getXSize()/app.win.getYSize()))
+            app.camLens.setFov(horizontal,vertical)
+            for _ in range(4):app.taskMgr.step()
             samples=[]
             for _ in range(36):
                 start=time.perf_counter();app.taskMgr.step();samples.append((time.perf_counter()-start)*1000)

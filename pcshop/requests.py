@@ -13,7 +13,10 @@ REQUESTS={
  'Storage upgrade':('Room for my projects',180,'My 480 GB drive works, but I need at least 1 TB for university projects. I have backed up my files; please fit a larger SATA SSD.'),
  'Checkup':('Second opinion',90,'An advert said my PC has hardware problems. It seems to run normally. Please test it before spending money on replacement parts.'),
 }
-KINDS=tuple(REQUESTS)
+from .builds import BRIEFS
+for k,b in BRIEFS.items():REQUESTS[k]=(b['title'],b['fee'],b['text'])
+KINDS=('RAM fault','Build gaming','Storage cable','Build office','GPU fault','RAM upgrade','Build studio','Storage power','Build gaming','Storage fault','Checkup','Build office','GPU cable','Storage upgrade','Build studio','RAM seating')
+OFFICE_KINDS={'RAM upgrade','Storage cable','Storage power','Checkup'}
 # Deterministic rotation is stable across reloads. Memory is a single desktop DIMM;
 # every SATA drive and GPU below uses the existing hands-on service procedure.
 PROFILES=(

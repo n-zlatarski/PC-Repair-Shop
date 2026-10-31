@@ -1,0 +1,65 @@
+PASS No cycling NPCs
+PASS Parked bicycles removed
+PASS Circled counter plaque removed
+PASS Passing cars retained
+PASS Marketplace has no page navigation
+PASS Only visible and neighboring catalog rows rendered
+PASS Mouse wheel scrolls down through catalog
+PASS Scrollbar reaches final catalog item
+PASS Adding a part preserves scroll position
+PASS Scrolled catalog item can be added to basket
+PASS Details opens selected scrolled product
+PASS Returning from details preserves scroll position
+PASS Changing category resets scroll
+PASS Empty search renders safely
+PASS Every listed product has photos and specifications
+PASS Find loose screw is available from GPU selection
+PASS Find loose screw button selects first unsecured component
+PASS Visible screw markers for Motherboard
+PASS Projected screw Motherboard 0
+PASS Held mouse tightens Motherboard 0
+PASS Projected screw Motherboard 1
+PASS Held mouse tightens Motherboard 1
+PASS Projected screw Motherboard 2
+PASS Held mouse tightens Motherboard 2
+PASS Projected screw Motherboard 3
+PASS Held mouse tightens Motherboard 3
+PASS Visible screw markers for Cooler
+PASS Projected screw Cooler 0
+PASS Held mouse tightens Cooler 0
+PASS Projected screw Cooler 1
+PASS Held mouse tightens Cooler 1
+PASS Projected screw Cooler 2
+PASS Held mouse tightens Cooler 2
+PASS Projected screw Cooler 3
+PASS Held mouse tightens Cooler 3
+PASS Visible screw markers for PSU
+PASS Projected screw PSU 0
+PASS Held mouse tightens PSU 0
+PASS Projected screw PSU 1
+PASS Held mouse tightens PSU 1
+PASS Projected screw PSU 2
+PASS Held mouse tightens PSU 2
+PASS Projected screw PSU 3
+PASS Held mouse tightens PSU 3
+PASS Visible screw markers for Fan
+PASS Projected screw Fan Rear 0
+PASS Held mouse tightens Fan Rear 0
+PASS Projected screw Fan Rear 1
+PASS Held mouse tightens Fan Rear 1
+PASS Projected screw Fan Rear 2
+PASS Held mouse tightens Fan Rear 2
+PASS Projected screw Fan Rear 3
+PASS Held mouse tightens Fan Rear 3
+PASS Visible screw markers for Storage
+PASS Projected screw Storage 0
+PASS Held mouse tightens Storage 0
+PASS Projected screw Storage 1
+PASS Held mouse tightens Storage 1
+PASS Visible screw markers for GPU
+PASS Projected screw GPU 0
+PASS Held mouse tightens GPU 0
+PASS Projected screw GPU 1
+PASS Held mouse tightens GPU 1
+PASS Every required mounting screw is reachable and tight
+PASS Fastener state survives save/reload

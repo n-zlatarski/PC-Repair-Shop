@@ -7,6 +7,10 @@ def run_hardware_jobs(check,output):
     j=RepairJob();seen=set()
     for expected in KINDS:
         check(j.kind==expected,'Request cycle: '+expected)
+        from pcshop import builds
+        if builds.is_build(j):
+            from .commissions import exercise
+            exercise(j,check);continue
         seen.add(j.hardware['Case']);j.accept();j.pickup();j.place()
         first=j.run_test();check(j.diagnosed and bool(j.diagnostic_report),'Diagnostic records evidence: '+expected)
         check(first[0]==(expected=='Checkup'),'Initial findings match actual hardware: '+expected)
@@ -44,7 +48,7 @@ def run_hardware_jobs(check,output):
         check(not j.diagnostic_report,'New ticket clears previous diagnostic findings')
         j.collect(row['id']);check(j.money==cash+reward,'Collection pays correct reward: '+expected)
     path.unlink()
-    check(len(seen)==3,'Three case models across customer requests')
+    check(len(seen)>=3,'At least three case models across customer requests')
     # Old version-2 saves with no new report or catalog entries still load.
     import json
     path=output/'old_save.json';j.save(path);data=json.loads(path.read_text());data.pop('diagnostic_report')

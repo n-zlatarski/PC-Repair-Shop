@@ -15,23 +15,28 @@ parser.add_argument('--visual-check',action='store_true',help='Capture and valid
 parser.add_argument('--output', default='verification', help='Output folder for verification screenshots')
 parser.add_argument('--stock-rear-check',action='store_true',help='Validate usable rack stock and rear delivery in an unsaved session')
 parser.add_argument('--performance-check',action='store_true',help='Validate 1080p, physical carrying, website and render activity')
-parser.add_argument('--fullscreen',action='store_true',help='Start at native desktop resolution')
+parser.add_argument('--fullscreen',action='store_true',help='Start fullscreen at 1920 x 1080')
 parser.add_argument('--display-check',action='store_true',help='Verify resize, fullscreen, graphics and input')
 args = parser.parse_args()
 loadPrcFileData('', '\n'.join([
-    'window-title BENCH / 01 - PC Repair Workshop', 'win-size 1920 1080',
+    'window-title BENCH / 01 - PC Repair Workshop', 'win-size 1920 1080', 'undecorated true', 'win-origin 0 0',
     'sync-video true', 'show-frame-rate-meter false', 'audio-library-name p3openal_audio',
-    'framebuffer-multisample true', 'multisamples 2', 'textures-power-2 none',
+    'framebuffer-multisample true', 'multisamples 4', 'textures-power-2 none',
     'notify-level warning', 'gl-check-errors false', 'model-cache-dir',
 ]))
+if not any((args.display_check,args.smoke_test,args.visual_check,args.equipment_check,args.windows_tools_check,args.city_check,args.district_check,args.stock_rear_check,args.performance_check)):
+    import json
+    from pcshop.model import default_save_path
+    try:
+        saved_settings=json.loads(default_save_path().with_name('settings.json').read_text())
+        loadPrcFileData('', 'sync-video '+('true' if saved_settings.get('vsync',True) else 'false'))
+    except (OSError,ValueError,TypeError):pass
 if args.display_check or args.smoke_test or args.visual_check or args.equipment_check or args.windows_tools_check or args.city_check or args.district_check or args.stock_rear_check or args.performance_check: loadPrcFileData('', 'audio-library-name null\nsync-video false')
 from pcshop.app import WorkshopApp
-app = WorkshopApp(fresh=args.fresh or args.display_check or args.smoke_test or args.visual_check or args.equipment_check or args.windows_tools_check or args.city_check or args.district_check or args.stock_rear_check or args.performance_check)
-if args.fullscreen:app.display.toggle()
-if not any((args.display_check,args.smoke_test,args.performance_check,args.equipment_check,args.stock_rear_check,args.district_check,args.city_check,args.visual_check,args.windows_tools_check)) and not args.fullscreen:
-    from panda3d.core import WindowProperties
-    if app.win.getXSize()>app.pipe.getDisplayWidth()-80 or app.win.getYSize()>app.pipe.getDisplayHeight()-100:
-        props=WindowProperties();props.setSize(min(1600,app.pipe.getDisplayWidth()-80),min(900,app.pipe.getDisplayHeight()-100));props.setOrigin(40,40);app.win.requestProperties(props)
+test_mode=any((args.display_check,args.smoke_test,args.performance_check,args.equipment_check,args.stock_rear_check,args.district_check,args.city_check,args.visual_check,args.windows_tools_check))
+app = WorkshopApp(menu=not test_mode,fresh=args.fresh or args.display_check or args.smoke_test or args.visual_check or args.equipment_check or args.windows_tools_check or args.city_check or args.district_check or args.stock_rear_check or args.performance_check)
+if args.windowed and app.display.fullscreen:app.display.toggle()
+elif args.fullscreen and not app.display.fullscreen:app.display.toggle()
 if args.display_check:
     from checks.display_graphics import install_checks
     install_checks(app,Path(args.output))

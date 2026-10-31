@@ -39,6 +39,8 @@ class Workshop:
             name=item['name'];leaf=name.rsplit('/',1)[-1]
             removed=name in {'Architecture/Finishes/BackDoorSign','Architecture/Finishes/ReceptionWallSign','Architecture/Finishes/WorkshopWayfinding','Reception/ReceptionCounter/CounterSignBase','Reception/ReceptionCounter/CounterSign','Reception/ReceptionCounter/CounterPlaque'}
             old_tool=name.startswith('Workshop/ToolBoard/') and not leaf.startswith(('Board','TopFrame','BottomFrame','SideFrame','Peg_'))
+            if 'Fixture' in leaf or 'Diffuser' in leaf:continue
+            if name.startswith('Workshop/RepairWorkbench/') and leaf in ('RepairWorkbenchTop','FrontApron','RearApron'):continue
             if removed or old_tool:self.replaced_meshes+=1;continue
             screen='/Computer/' in name and (leaf in ('Screen','Header','Sidebar') or leaf.startswith(('Menu','Text','Status')))
             shelf=name.startswith('Storage/PartsShelf_')
@@ -107,7 +109,9 @@ class Workshop:
         node = GeomNode(item['name']); node.addGeom(geom)
         parent = self.groups.get(item['name'].split('/')[0], self.static)
         path = parent.attachNewNode(node); path.setColor(*color)
-        if key:path.setTexture(self.app.builder.textures[key],1)
+        if key:
+            path.setTexture(self.app.builder.textures[key],1)
+            if key in self.app.builder.materials:path.setMaterial(self.app.builder.materials[key],1)
         if item['emission']: path.setLightOff(1)
         if item['color'][3] < .99:
             path.setTransparency(TransparencyAttrib.MAlpha)
@@ -118,16 +122,19 @@ class Workshop:
 
     def material_for(self,item):
         name=item['name'].lower();c=list(item['color'])
-        if c[3]<.99:return None,(.70,.84,.88,min(c[3],.075))
-        if item['emission']:return None,c
-        if name=='architecture/floor':return 'tile',(.64,.67,.69,1)
-        if name=='architecture/ceiling':return 'ceiling',(.90,.91,.92,1)
+        if c[3]<.99:return None,(.54,.66,.70,min(c[3],.07))
+        if item['emission']:return None,(.83,.85,.75,1)
+        if name=='architecture/floor':return 'tile',(.73,.70,.64,1)
+        if name=='architecture/ceiling':return 'ceiling',(.84,.82,.76,1)
         if name.startswith('architecture/') and ('wall' in name or 'archsegment' in name or 'archjamb' in name) and 'sign' not in name:
-            return 'plaster',(.84,.85,.84,1) if 'interiorwall' not in name else (.54,.63,.65,1)
-        if any(k in name for k in ('landing',)):return 'concrete',(.56,.55,.51,1)
-        if any(k in name for k in ('reception_top','woodpanel','paneljoint','sidetop')):return 'wood',(.64,.49,.32,1)
-        if 'mat' in name:return 'rubber',(.16,.33,.35,1)
-        if c[2]>c[0]*2 and c[1]>.2:c=[.16,.34,.39,c[3]]
+            return 'plaster',(.78,.75,.68,1) if 'interiorwall' not in name else (.24,.31,.29,1)
+        if any(k in name for k in ('landing',)):return 'concrete',(.58,.57,.52,1)
+        if any(k in name for k in ('reception_top','woodpanel','paneljoint','sidetop')):return 'wood',(.36,.26,.17,1)
+        if 'receptioncounter/' in name and '/computer/' not in name:return 'metal',(.19,.25,.24,1)
+        if 'mat' in name:return 'rubber',(.14,.23,.22,1)
+        if 'toolboard/board' in name:return 'metal',(.21,.26,.25,1)
+        if 'worktop' in name or 'tabletop' in name:return 'wood',(.46,.34,.23,1)
+        if c[2]>c[0]*1.5 and c[1]>.2:c=[.23,.32,.29,c[3]]
         return 'metal',c
 
     def lights(self):
