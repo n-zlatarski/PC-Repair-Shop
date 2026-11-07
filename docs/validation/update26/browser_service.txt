@@ -1,0 +1,71 @@
+PASS Twelve usable speed-dial tiles
+PASS Network destination removed from browser home
+PASS Speed Dial destination: Partline
+PASS Speed Dial destination: Graphics cards
+PASS Category has actual products: Graphics cards
+PASS Speed Dial destination: Processors
+PASS Category has actual products: Processors
+PASS Speed Dial destination: Motherboards
+PASS Category has actual products: Motherboards
+PASS Speed Dial destination: Memory
+PASS Category has actual products: Memory
+PASS Speed Dial destination: SSD & storage
+PASS Category has actual products: SSD & storage
+PASS Speed Dial destination: Cases
+PASS Category has actual products: Cases
+PASS Speed Dial destination: Power supplies
+PASS Category has actual products: Power supplies
+PASS Speed Dial destination: Cooling
+PASS Category has actual products: Cooling
+PASS Speed Dial destination: Case fans
+PASS Category has actual products: Case fans
+PASS Speed Dial destination: My orders
+PASS Speed Dial destination: Hardware guide
+PASS New tab opens Speed Dial
+PASS Omnibox searches actual catalog
+PASS Tab switch restores filters and scroll
+PASS Second tab retains independent search
+PASS Back restores previous page and query
+PASS Forward restores next page
+PASS New navigation truncates forward history
+PASS Home explicitly opens Speed Dial
+PASS Home search submits its entry
+PASS Pin adds a working product shortcut
+PASS Duplicate shortcut rejected
+PASS Pinned product opens its actual product page
+PASS Remove shortcut updates Speed Dial
+PASS Removed network URL is unavailable in browser
+PASS Unknown addresses show a readable error page
+PASS Unknown external page handled without crash
+PASS Network remains a separate desktop app
+PASS Reopening browser resumes active tab
+PASS Closing another tab preserves active page
+PASS Reception has independent browser tabs
+PASS Diagnostic browser remains independent
+PASS Tabs, history and shortcuts survive save/load
+PASS Older saves migrate without losing game data
+PASS Tab limit enforced
+PASS Closing last tab leaves a usable new tab
+PASS GPU connector drag begins
+PASS Visible tray accepts coordinate (640, 646)
+PASS Release in marked tray unplugs GPU
+PASS GPU connector drag begins
+PASS Visible tray accepts coordinate (382, 614)
+PASS Release in marked tray unplugs GPU
+PASS GPU connector drag begins
+PASS Visible tray accepts coordinate (898, 666)
+PASS Release in marked tray unplugs GPU
+PASS Invalid drop does not unplug a seated connector
+PASS Tray works after orbit and zoom
+PASS Loose GPU plug can be dragged from visible tray after zoom
+PASS GPU reconnects at actual socket
+PASS Air cleaning rejects unrestrained fan
+PASS HOLD FAN permits air cleaning
+PASS Dust gradually disappears without shrinking geometry
+PASS Cancel restores dust and leaves service unfinished
+PASS All visible fan dust transforms remain invertible through full cleaning
+PASS HOLD FAN + air duster completes without renderer crash
+PASS Completed fan rejects repeated cleaning
+PASS Powered PC rejects air cleaning
+PASS Looking away cancels fan cleaning safely
+PASS Permanent technician PC exists separately from customer PC

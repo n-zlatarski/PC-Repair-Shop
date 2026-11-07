@@ -1,0 +1,96 @@
+PASS GPU cable blocks software before diagnosis
+PASS GPU cable produces no invented diagnostic report
+PASS GPU cable has a physical observation
+PASS GPU cable boots and passes after hardware repair
+PASS RAM seating blocks software before diagnosis
+PASS RAM seating produces no invented diagnostic report
+PASS RAM seating has a physical observation
+PASS RAM seating boots and passes after hardware repair
+PASS Storage cable blocks software before diagnosis
+PASS Storage cable produces no invented diagnostic report
+PASS Storage cable has a physical observation
+PASS Storage cable boots and passes after hardware repair
+PASS Storage power blocks software before diagnosis
+PASS Storage power produces no invented diagnostic report
+PASS Storage power has a physical observation
+PASS Storage power boots and passes after hardware repair
+PASS Intermittent memory errors remain software-testable
+PASS A SATA lead requires both ends
+PASS Partially connected cable survives save and reload
+PASS Live PC rejects manual cable work
+PASS New desktop shortcut opens browser
+PASS Service widget opens Hardware Lab
+PASS Dock restores minimized app
+PASS App launcher search still works
+PASS Black-screen fault disables Run Diagnostic
+PASS Controller also blocks diagnostic bypass
+PASS Socket projects into camera
+PASS Assembly displays the screwdriver at held screw
+PASS Releasing early leaves screw unfinished
+PASS Socket projects into camera
+PASS Holding completes the selected mounting screw
+PASS Driver hides after screw completion
+PASS Completely unplugged SATA lead remains visible in tray
+PASS Cable work keeps the live 3D view
+PASS No one-click connect cable buttons remain
+PASS Socket projects into camera
+PASS 24-pin motherboard plug can be picked up
+PASS Held plug replaces its resting mesh / 24-pin motherboard
+PASS Dropping in empty space does not connect
+PASS Socket projects into camera
+PASS Socket projects into camera
+PASS 24-pin motherboard seats only at matching socket
+PASS Socket projects into camera
+PASS CPU 8-pin plug can be picked up
+PASS Held plug replaces its resting mesh / CPU 8-pin
+PASS Socket projects into camera
+PASS CPU 8-pin seats only at matching socket
+PASS Socket projects into camera
+PASS SATA data plug can be picked up
+PASS Held plug replaces its resting mesh / SATA data
+PASS Socket projects into camera
+PASS SATA data seats only at matching socket
+PASS Socket projects into camera
+PASS SATA data plug can be picked up
+PASS Held plug replaces its resting mesh / SATA data
+PASS Socket projects into camera
+PASS SATA data seats only at matching socket
+PASS Socket projects into camera
+PASS SATA power plug can be picked up
+PASS Held plug replaces its resting mesh / SATA power
+PASS Socket projects into camera
+PASS SATA power seats only at matching socket
+PASS Socket projects into camera
+PASS Front panel plug can be picked up
+PASS Held plug replaces its resting mesh / Front panel
+PASS Socket projects into camera
+PASS Front panel seats only at matching socket
+PASS Socket projects into camera
+PASS CPU fan plug can be picked up
+PASS Held plug replaces its resting mesh / CPU fan
+PASS Socket projects into camera
+PASS CPU fan seats only at matching socket
+PASS Socket projects into camera
+PASS GPU power plug can be picked up
+PASS Held plug replaces its resting mesh / GPU power
+PASS Socket projects into camera
+PASS GPU power seats only at matching socket
+PASS Socket projects into camera
+PASS Fan / Rear plug can be picked up
+PASS Held plug replaces its resting mesh / Fan / Rear
+PASS Socket projects into camera
+PASS Fan / Rear seats only at matching socket
+PASS All required leads manually connected
+PASS Socket projects into camera
+PASS Socket projects into camera
+PASS Dragging a seated end to tray unplugs it
+PASS Socket projects into camera
+PASS Socket projects into camera
+PASS Returning to assembly restores screw handles
+PASS RAM mesh contains no brand, model or capacity text
+PASS Connected leads remain visible with the panel fitted
+PASS Socket guides do not remain visible outside cable work
+PASS Manually wired build reaches operating system
+PASS Manually assembled build passes final software verification
+PASS Repair workbench opens same manual cable workspace
+PASS Repair cable view returns to repair workbench

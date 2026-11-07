@@ -1,0 +1,22 @@
+PASS Reworked resident keeps hand contact / -1
+PASS Reworked resident keeps hand contact / 1
+PASS Walking joints intact / 0
+PASS Hand geometry stays local / 0
+PASS Separate blink rig / 0
+PASS Walking joints intact / 1
+PASS Hand geometry stays local / 1
+PASS Separate blink rig / 1
+PASS Walking joints intact / 2
+PASS Hand geometry stays local / 2
+PASS Separate blink rig / 2
+PASS Walking joints intact / 3
+PASS Hand geometry stays local / 3
+PASS Separate blink rig / 3
+PASS Walking joints intact / 4
+PASS Hand geometry stays local / 4
+PASS Separate blink rig / 4
+PASS Walking joints intact / 5
+PASS Hand geometry stays local / 5
+PASS Separate blink rig / 5
+PASS Wardrobe silhouettes remain varied
+PASS Courier retains separate uniform

@@ -1,0 +1,13 @@
+PASS Substantial expansion across every component category
+PASS Every new listing has a dated source price, specifications, readable photo and box textures
+PASS AMD has multiple distinct card listings
+PASS Intel has multiple distinct card listings
+PASS All new listings enter purchasable game stock
+PASS Older save gains new stock without resetting money
+PASS AMD GPU works in a fully assembled and cabled customer build
+PASS AMD installed build survives save and reload
+PASS Intel GPU works in a fully assembled and cabled customer build
+PASS Intel installed build survives save and reload
+PASS Reorganized source resolves the runtime assets
+PASS Old source/test directories are not duplicated
+COMPLETE 12

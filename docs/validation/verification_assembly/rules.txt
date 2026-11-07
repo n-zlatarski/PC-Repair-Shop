@@ -1,0 +1,34 @@
+PASS No deposit paid at acceptance
+PASS Flat $50 labour
+PASS Labour included in $2000 limit
+PASS Mainstream board has four DIMM slots
+PASS Four individually installed 8 GB DIMMs total 32 GB
+PASS Occupied DIMM rejects another module
+PASS Individual removal retains other DIMMs
+PASS Three fans installed in different mounts
+PASS Every fan requires a connection
+PASS Loose screws block sign-off
+PASS Complete multi-DIMM multi-fan build passes
+PASS No payment at collection-table placement
+PASS Invoice equals actual installed parts plus $50
+PASS Customer pays full invoice on handover
+PASS Cannot collect twice
+PASS Budget H510 board has two slots
+PASS No imaginary third or fourth slot on two-DIMM board
+PASS Kit opens into separate DIMMs
+PASS Two-stick kit capacity counted once
+PASS No duplicated kit modules
+PASS Kit charged once across both modules
+PASS Wrong CPU socket rejected
+PASS Customer familiarity saved
+PASS Customer familiarity saved
+PASS Customer familiarity saved
+PASS Beginner describes needs without a shopping list
+PASS Supplier credit enables build without customer deposit
+PASS Courier waits with one order carton
+PASS One handover transfers all three retail units
+PASS Entire order collected exactly once
+PASS Fractional prices, debt and parcels survive reload
+PASS Unaccepted older request adopts the new payment terms
+PASS Repeated gaming commissions include both beginner and experienced clients
+33 checks passed.

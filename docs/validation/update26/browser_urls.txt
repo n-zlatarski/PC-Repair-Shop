@@ -1,0 +1,3 @@
+PASS Searches containing decimal specifications
+PASS Filtered URLs restore manufacturer, GPU vendor, finish and sort
+PASS Filtered page URLs round-trip through navigation

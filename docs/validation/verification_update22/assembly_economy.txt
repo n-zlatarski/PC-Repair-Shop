@@ -1,0 +1,72 @@
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+:pnmimage:png(warning): Interlace handling should be turned on when using png_read_image
+PASS All 207 listings have exact quoted prices, specifications, sources and readable product photos
+PASS Build office $1000: only available quoted products
+PASS Build office $1000: feasible parts $721.15
+PASS Build office $1000: whole order collected in one carton
+PASS Build office $1000: assembled build passes all targets
+PASS Build office $1000: sockets and fractional invoice survive reload
+PASS Build office $1000: supplier repaid; exactly $50 labour earned
+PASS Build office $1200: only available quoted products
+PASS Build office $1200: feasible parts $721.15
+PASS Build office $1200: whole order collected in one carton
+PASS Build office $1200: assembled build passes all targets
+PASS Build office $1200: sockets and fractional invoice survive reload
+PASS Build office $1200: supplier repaid; exactly $50 labour earned
+PASS Build office $1400: only available quoted products
+PASS Build office $1400: feasible parts $721.15
+PASS Build office $1400: whole order collected in one carton
+PASS Build office $1400: assembled build passes all targets
+PASS Build office $1400: sockets and fractional invoice survive reload
+PASS Build office $1400: supplier repaid; exactly $50 labour earned
+PASS Build gaming $2000: only available quoted products
+PASS Build gaming $2000: feasible parts $1896.07
+PASS Build gaming $2000: whole order collected in one carton
+PASS Build gaming $2000: assembled build passes all targets
+PASS Build gaming $2000: sockets and fractional invoice survive reload
+PASS Build gaming $2000: supplier repaid; exactly $50 labour earned
+PASS Build gaming $1500: only available quoted products
+PASS Build gaming $1500: feasible parts $1147.50
+PASS Build gaming $1500: whole order collected in one carton
+PASS Build gaming $1500: assembled build passes all targets
+PASS Build gaming $1500: sockets and fractional invoice survive reload
+PASS Build gaming $1500: supplier repaid; exactly $50 labour earned
+PASS Build gaming $1800: only available quoted products
+PASS Build gaming $1800: feasible parts $1147.50
+PASS Build gaming $1800: whole order collected in one carton
+PASS Build gaming $1800: assembled build passes all targets
+PASS Build gaming $1800: sockets and fractional invoice survive reload
+PASS Build gaming $1800: supplier repaid; exactly $50 labour earned
+PASS Build studio $2400: only available quoted products
+PASS Build studio $2400: feasible parts $2244.97
+PASS Build studio $2400: whole order collected in one carton
+PASS Build studio $2400: assembled build passes all targets
+PASS Build studio $2400: sockets and fractional invoice survive reload
+PASS Build studio $2400: supplier repaid; exactly $50 labour earned
+PASS Build studio $1800: only available quoted products
+PASS Build studio $1800: feasible parts $1496.40
+PASS Build studio $1800: whole order collected in one carton
+PASS Build studio $1800: assembled build passes all targets
+PASS Build studio $1800: sockets and fractional invoice survive reload
+PASS Build studio $1800: supplier repaid; exactly $50 labour earned
+PASS Build studio $2200: only available quoted products
+PASS Build studio $2200: feasible parts $1624.40
+PASS Build studio $2200: whole order collected in one carton
+PASS Build studio $2200: assembled build passes all targets
+PASS Build studio $2200: sockets and fractional invoice survive reload
+PASS Build studio $2200: supplier repaid; exactly $50 labour earned
+PASS Repair removal clears rendered memory slots
+PASS Repair replacement updates rendered memory capacity

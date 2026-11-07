@@ -1,4 +1,6 @@
-.venv/
 __pycache__/
-*.pyc
-verification/
+*.py[cod]
+.venv/
+reports/
+*.log
+.DS_Store

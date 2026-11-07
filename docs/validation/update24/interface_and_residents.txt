@@ -1,0 +1,40 @@
+PASS Main menu settings opens with mouse input
+PASS Settings controls update values
+PASS Desktop dashboard opens browser
+PASS Browser opens marketplace
+PASS Marketplace retains Intel filter
+PASS Scrolled product card opens correct details
+PASS Start launcher opens
+PASS Start search filters applications
+PASS Start launches settings
+PASS Appearance changes wallpaper
+PASS Application maximizes
+PASS Application minimizes
+PASS Taskbar restores application
+PASS Settings network link works
+PASS New files card opens service record
+PASS Lock and sign-in preserve navigation
+PASS Physical monitor retains redesigned desktop
+PASS Consultation asks intended use
+PASS Consultation asks budget
+PASS Consultation starts agreed build at empty bench
+PASS 1280 x 720 window available
+PASS Browser hit regions work at 720p
+PASS UI proportions uniform at 720p
+PASS World camera remains widescreen
+PASS Hand rig keeps PC contact on side -1
+PASS Hand rig keeps PC contact on side 1
+PASS Residents have distinct wardrobe silhouettes
+PASS Courier wears dedicated uniform
+PASS Resident 0 walking joints valid
+PASS Resident 0 hand geometry remains local to wrist
+PASS Resident 1 walking joints valid
+PASS Resident 1 hand geometry remains local to wrist
+PASS Resident 2 walking joints valid
+PASS Resident 2 hand geometry remains local to wrist
+PASS Resident 3 walking joints valid
+PASS Resident 3 hand geometry remains local to wrist
+PASS Resident 4 walking joints valid
+PASS Resident 4 hand geometry remains local to wrist
+PASS Resident 5 walking joints valid
+PASS Resident 5 hand geometry remains local to wrist

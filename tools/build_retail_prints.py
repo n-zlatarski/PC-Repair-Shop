@@ -2,7 +2,7 @@
 from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont
 import sys,math,random
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"src"))
 from pcshop.catalog import PARTS
 ROOT=Path(__file__).resolve().parents[1]/'assets'/'packaging';ROOT.mkdir(exist_ok=True)
 FONT=Path(__file__).resolve().parents[1]/'assets'/'Interface.ttf'

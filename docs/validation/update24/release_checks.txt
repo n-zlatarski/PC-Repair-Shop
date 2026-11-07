@@ -1,0 +1,6 @@
+PASS Python source compilation
+PASS 40 graphical/pointer/character checks
+PASS 33 assembly rule checks
+PASS 57 economy/catalog/image checks
+Rendering: Panda3D 1.10.16 / Linux software OpenGL
+Native Windows FPS was not measured.

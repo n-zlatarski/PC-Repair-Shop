@@ -1,0 +1,11 @@
+{
+  "release": 25,
+  "checks": {
+    "assembly_rules": 33,
+    "characters": 22,
+    "economy": 57,
+    "hands_on": 96
+  },
+  "total": 208,
+  "rendering": "offscreen EGL, simulated pointer through production controllers; no native Windows validation"
+}
